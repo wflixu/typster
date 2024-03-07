@@ -13,9 +13,12 @@ edition = "2021"
 tauri-build = { version = "1.2", features = [] }
 
 [dependencies]
-tauri = { version = "1.2", features = ["shell-open"] }
+tauri = { version = "1.2", features = [ "path-all", "dialog-all", "shell-open"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+typst = "0.1.1"
+mdxjs = "0.1.23"
+markdown = "1.0.0-alpha.16"
 
 [features]
 # this feature is used for production builds or when `devPath` points to the filesystem

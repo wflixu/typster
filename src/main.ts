@@ -1,5 +1,6 @@
 import { createApp } from "vue";
-import "./styles.css";
+import "./style/styles.css";
+import "github-markdown-css";
 import App from "./App.vue";
 
 createApp(App).mount("#app");
