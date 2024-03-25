@@ -4,7 +4,10 @@
     "beforeBuildCommand": "pnpm build",
     "devPath": "http://localhost:1420",
     "distDir": "../dist",
-    "withGlobalTauri": false
+    "withGlobalTauri": false,
+    "features": [
+      "embed-fonts"
+    ]
   },
   "package": {
     "productName": "typster",
@@ -12,6 +15,10 @@
   },
   "tauri": {
     "allowlist": {
+      "http": {
+        "all": true,
+        "scope": ["http://127.0.0.1:8443/chunk/*"]
+      },
       "dialog": {
         "all": true, 
         "ask": true, 
@@ -22,6 +29,10 @@
       },
       "path": {
         "all": true
+      },
+      "fs": {
+        "all": true,
+        "scope": ["$HOME/**/*"]
       },
       "shell": {
         "all": false,
@@ -54,7 +65,7 @@
         "x": 2000,
         "y": 100,
         "width": 1200,
-        "height": 900
+        "height": 1200
       }
     ]
   }

@@ -1,0 +1,152 @@
+{
+    "children": [
+        {
+            "children": [
+                {
+                    "position": {
+                        "end": {
+                            "column": 23,
+                            "line": 1,
+                            "offset": 22
+                        },
+                        "start": {
+                            "column": 4,
+                            "line": 1,
+                            "offset": 3
+                        }
+                    },
+                    "type": "text",
+                    "value": "MDX 能干什么？"
+                }
+            ],
+            "depth": 2,
+            "position": {
+                "end": {
+                    "column": 23,
+                    "line": 1,
+                    "offset": 22
+                },
+                "start": {
+                    "column": 1,
+                    "line": 1,
+                    "offset": 0
+                }
+            },
+            "type": "heading"
+        },
+        {
+            "children": [
+                {
+                    "position": {
+                        "end": {
+                            "column": 42,
+                            "line": 3,
+                            "offset": 65
+                        },
+                        "start": {
+                            "column": 1,
+                            "line": 3,
+                            "offset": 24
+                        }
+                    },
+                    "type": "text",
+                    "value": "它能够让我们在 markdown 中写 JSX"
+                }
+            ],
+            "position": {
+                "end": {
+                    "column": 42,
+                    "line": 3,
+                    "offset": 65
+                },
+                "start": {
+                    "column": 1,
+                    "line": 3,
+                    "offset": 24
+                }
+            },
+            "type": "paragraph"
+        },
+        {
+            "children": [
+                {
+                    "position": {
+                        "end": {
+                            "column": 40,
+                            "line": 5,
+                            "offset": 106
+                        },
+                        "start": {
+                            "column": 1,
+                            "line": 5,
+                            "offset": 67
+                        }
+                    },
+                    "type": "text",
+                    "value": "这是 2018 年，降水量柱状图。"
+                }
+            ],
+            "position": {
+                "end": {
+                    "column": 40,
+                    "line": 5,
+                    "offset": 106
+                },
+                "start": {
+                    "column": 1,
+                    "line": 5,
+                    "offset": 67
+                }
+            },
+            "type": "paragraph"
+        },
+        {
+            "children": [
+                {
+                    "alt": "",
+                    "position": {
+                        "end": {
+                            "column": 20,
+                            "line": 7,
+                            "offset": 127
+                        },
+                        "start": {
+                            "column": 1,
+                            "line": 7,
+                            "offset": 108
+                        }
+                    },
+                    "title": null,
+                    "type": "image",
+                    "url": "./app-icon.png"
+                }
+            ],
+            "position": {
+                "end": {
+                    "column": 20,
+                    "line": 7,
+                    "offset": 127
+                },
+                "start": {
+                    "column": 1,
+                    "line": 7,
+                    "offset": 108
+                }
+            },
+            "type": "paragraph"
+        }
+    ],
+    "position": {
+        "end": {
+            "column": 1,
+            "line": 8,
+            "offset": 128
+        },
+        "start": {
+            "column": 1,
+            "line": 1,
+            "offset": 0
+        }
+    },
+    "type": "root"
+}

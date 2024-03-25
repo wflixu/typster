@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import MdxEditor from './pages/markdown/MdxEditor.vue'
+import TypstEditor from './pages/typst/TypstEditor.vue'
 </script>
 
 <template>
   <main>
-   <MdxEditor/>
+   <!-- <MdxEditor/> -->
+   <TypstEditor/>
   </main>
 </template>
 

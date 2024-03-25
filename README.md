@@ -1,4 +1,4 @@
-# typster
+# typster 
 ![](./app-icon.png)
 
 typst reader and editor
