@@ -14,7 +14,9 @@
     "pack": "pnpm tauri build"
   },
   "dependencies": {
+    "@ant-design/icons-vue": "^7.0.1",
     "@tauri-apps/api": "^1.5.3",
+    "ant-design-vue": "4.x",
     "github-markdown-css": "^5.5.1",
     "monaco-editor": "^0.46.0",
     "pinia": "^2.1.7",

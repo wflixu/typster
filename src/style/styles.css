@@ -1,6 +1,15 @@
+@import url(base.css);
 
 
 body,html {
   margin: 0;
   padding: 0;
 }
+
+#app {
+  min-height: 100vh;
+}
+.page {
+  height: 100%;
+}
+
