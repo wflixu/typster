@@ -1,10 +1,10 @@
 <template>
     <div class="typster">
+        <div class="actions">
+            <button @click="onTest">test</button>
+            <button @click="onCompile">compile</button>
+        </div>
         <div class="source">
-            <div>
-                <button @click="onTest">test</button>
-                <button @click="onCompile">compile</button>
-            </div>
             <pre>
                 {{ source }}
             </pre>
@@ -16,20 +16,27 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue';
+import { onMounted, ref, unref, watch } from 'vue';
 import { readTextFile } from '@tauri-apps/api/fs';
 import { invoke } from "@tauri-apps/api";
 
 import defaultUrl from './../../assets/vue.svg'
 import { TypstCompileEvent, TypstRenderResponse } from './interface';
 import { appWindow } from '@tauri-apps/api/window';
+import { useSystemStoreHook } from '../../store/store';
 
+
+const systemStore = useSystemStoreHook();
 const source = ref("")
 const mainpath = "/Users/lixu/play/doc/main.typ"
 const imgUrl = ref(defaultUrl);
 
 const readDefaultContent = async () => {
-    const contents = await readTextFile(mainpath);
+    let filePath = unref(systemStore.editingFilePath)
+    if(!filePath) {
+      return;
+    }
+    const contents = await readTextFile(filePath);
     source.value = contents;
     console.log(contents)
 }
@@ -50,6 +57,8 @@ const onTest = async () => {
 }
 
 const onCompile = async () =>{
+   const mainpath = systemStore.editingProject?.path + '/main.typ';
+   console.log(mainpath)
    const res = await invoke<TypstRenderResponse>("typst_compile", { path:mainpath, content: source.value });
    console.log(res)
 }
@@ -69,6 +78,10 @@ watch(() => source.value, (newVal) => {
     renderPage()
 })
 
+watch(() => systemStore.editingFilePath, ()=>{
+    readDefaultContent();
+})
+
 
 
 
@@ -78,17 +91,28 @@ watch(() => source.value, (newVal) => {
 .typster {
     height: 100%;
     background-color: aqua;
-    display: flex;
-    gap: 0 16px;
-
+    display: grid;
+    grid-template-areas: 
+            "a a"
+            "b c";
+   grid-template-rows: 36px 1fr; /* 3.各区域 宽高设置 */
+   grid-template-columns: 1fr 1fr;
+    .actions {
+        grid-area: a;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        padding: 0 32px;
+        gap: 16px;
+    }
     .source {
-        flex: 1;
+        grid-area: b;
         background-color: coral;
         padding: 16px;
     }
 
     .result {
-        flex: 1;
+        grid-area: c;
         background-color: white;
 
         img {

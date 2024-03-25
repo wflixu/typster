@@ -10,7 +10,6 @@ use log::{debug, info};
 use serde::Serialize;
 use serde_repr::Serialize_repr;
 use siphasher::sip128::{Hasher128, SipHasher};
-use typst::model::Document;
 use std::hash::Hash;
 use std::path::PathBuf;
 use std::sync::Arc;

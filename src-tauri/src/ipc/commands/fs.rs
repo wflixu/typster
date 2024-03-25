@@ -1,7 +1,8 @@
 use super::{Error, Result};
 use crate::ipc::commands::project_path;
-use crate::project::ProjectManager;
+use crate::project::{Project, ProjectManager};
 use enumset::EnumSetType;
+use log::info;
 use serde::Serialize;
 use std::cmp::Ordering;
 use std::fs;
@@ -23,6 +24,19 @@ pub struct FileItem {
 pub enum FileType {
     File,
     Directory,
+}
+
+#[tauri::command]
+pub async fn load_project_from_path<R: Runtime>(
+    window: Window<R>,
+    project_manager: State<'_, Arc<ProjectManager<R>>>,
+    path: String,
+) -> Result<()> {
+    let path_buf = PathBuf::from(&path);
+    let project = Arc::new(Project::load_from_path(path_buf));
+    project_manager.set_project(&window, Some(project));
+    info!("succeeded load_project_from_path {}", &path);
+    Ok(())
 }
 
 /// Reads raw bytes from a specified path.

@@ -19,7 +19,7 @@
         </div>
 
         <div class="footer">
-            <a-button @click="addProject" class="w-full" size="large" type="primary"> Add Project </a-button>
+            <a-button @click="addProject" block size="large" type="primary"> Add Project </a-button>
         </div>
         <AddProject v-model:open="show" @finish="onFinish" />
     </div>
@@ -32,6 +32,7 @@ import type { IProject } from './interface';
 import { useSystemStoreHook } from '../../store/store';
 import AddProject from './AddProject.vue'
 import { useRouter } from 'vue-router';
+import { invoke } from '@tauri-apps/api';
 
 const systemStore = useSystemStoreHook();
 const router = useRouter()
@@ -49,16 +50,15 @@ const isEmpty = computed(() =>{
 
 const onSelect = (pr: IProject) =>{
     systemStore.selectProject(pr);
+    invoke('load_project_from_path', {path: pr.path}).then(res=>{
+
+    }).catch(err=>{
+        
+    })
     router.push('/home')
 }
 
 const addProject = async () => {
-    // const selected = await open({
-    //     directory: true,
-    //     multiple: false,
-    //     defaultPath: await appDir(),
-    // });
-    // console.log(selected)
     show.value = true;
 }
 

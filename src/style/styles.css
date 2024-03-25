@@ -1,5 +1,8 @@
 @import url(base.css);
 
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 body,html {
   margin: 0;
@@ -8,6 +11,7 @@ body,html {
 
 #app {
   min-height: 100vh;
+  position: relative;
 }
 .page {
   height: 100%;

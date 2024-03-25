@@ -6,6 +6,7 @@ const pinia = createPinia();
 const EDITING_FILE = "EDITING_FILE";
 const DEVICE_key = "ICAMERA_DEVICE_ID";
 const PROJECTS_KEY = "PROJECTS_KEY";
+const EDITING_PROJECT = "EDITING_PROJECT";
 
 const useSystemStoreHook = defineStore("system", () => {
   const editingFilePath = ref(window.localStorage.getItem(EDITING_FILE) ?? "");
@@ -37,9 +38,12 @@ const useSystemStoreHook = defineStore("system", () => {
     window.localStorage.setItem(PROJECTS_KEY, JSON.stringify(projects));
   };
 
-  const editingProject = ref<IProject | null>(null);
+  const editingProject = ref<IProject | null>(
+    JSON.parse(window.localStorage.getItem(EDITING_PROJECT) ?? "null")
+  );
   const selectProject = (pr: IProject) => {
     editingProject.value = pr;
+    window.localStorage.setItem(EDITING_PROJECT, JSON.stringify(pr));
   };
   return {
     editingProject,

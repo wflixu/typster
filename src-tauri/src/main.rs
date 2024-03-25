@@ -40,6 +40,7 @@ async fn main() {
             ipc::commands::fs_create_file,
             ipc::commands::fs_write_file_binary,
             ipc::commands::fs_write_file_text,
+            ipc::commands::load_project_from_path,
             ipc::commands::typst_compile,
             ipc::commands::typst_render,
             ipc::commands::typst_autocomplete,
