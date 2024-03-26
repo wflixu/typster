@@ -5,12 +5,8 @@
 <script setup lang="ts">
 import * as monaco from "monaco-editor/esm/vs/editor/editor.api";
 import { onMounted, onUnmounted, ref, watch } from "vue";
-const props = defineProps({
-  modelValue: String,
-});
-const emit = defineEmits<{
-  "update:modelValue": [value: string];
-}>();
+
+const model = defineModel({ type: String, default: '' })
 
 const boxRef = ref<HTMLElement>();
 let monacoEditor: monaco.editor.IStandaloneCodeEditor | null = null;
@@ -21,7 +17,7 @@ onMounted(() => {
     return;
   }
   monacoEditor = monaco.editor.create(boxRef.value!, {
-    value: props.modelValue,
+    value: model.value,
     language: "mdx",
     fontSize: 16,
     lineHeight: 32,
@@ -29,12 +25,24 @@ onMounted(() => {
     minimap: { enabled: false },
   });
   monacoEditor.onDidChangeModelContent((ev) => {
-    emit("update:modelValue", monacoEditor?.getValue() ?? "");
+    model.value = monacoEditor?.getValue() ?? "";
+  });
+  // // 使用浏览器原生 API 实现复制
+  // monacoEditor.onCopy(function (e) {
+  //   // 将选中的文本复制到剪贴板
+  //   navigator.clipboard.writeText(e.selection.getSelectedText());
+  // });
+
+  // 使用编辑器事件实现粘贴
+  monacoEditor.onDidPaste(function (e) {
+    // 将剪贴板中的文本粘贴到编辑器中
+    console.log(e)
+    // e.selection.insertText(navigator.clipboard.readText());
   });
 });
 
 watch(
-  () => props.modelValue,
+  () => model.value,
   async (val, old) => {
     if (monacoEditor) {
       if (val != monacoEditor.getValue()) {
@@ -57,7 +65,6 @@ onUnmounted(() => {
 <style scoped>
 .monaco-editor {
   padding: 16px 0px;
-  /* background-color: black; */
   width: 100%;
   height: 100%;
 }

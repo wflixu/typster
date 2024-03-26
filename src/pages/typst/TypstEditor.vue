@@ -1,35 +1,48 @@
 <template>
-    <div class="typster">
+    <div class="typster" :class="layoutcls">
         <div class="actions">
             <button @click="onTest">test</button>
             <button @click="onCompile">compile</button>
+            <a-button :icon="h(SaveOutlined)" @click="saveSource"></a-button>
+            <a-button :icon="h(EditOutlined)" @click="systemStore.toggleEditView()"></a-button>
+            <a-button :icon="h(ReadOutlined)" @click="systemStore.togglePreview()"></a-button>
         </div>
-        <div class="source">
-            <pre>
-                {{ source }}
-            </pre>
+        <div class="source" v-show="systemStore.editView">
+            <MonacoEditor v-model="source"></MonacoEditor>
         </div>
-        <div class="result">
+        <div class="result" v-show="systemStore.preview">
             <img :src=imgUrl alt="">
         </div>
     </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, unref, watch } from 'vue';
-import { readTextFile } from '@tauri-apps/api/fs';
+import { onMounted, ref, unref, watch,h, computed } from 'vue';
+import { readTextFile, writeTextFile } from '@tauri-apps/api/fs';
 import { invoke } from "@tauri-apps/api";
-
+import {EditOutlined, ReadOutlined, SaveOutlined} from '@ant-design/icons-vue'
 import defaultUrl from './../../assets/vue.svg'
 import { TypstCompileEvent, TypstRenderResponse } from './interface';
 import { appWindow } from '@tauri-apps/api/window';
 import { useSystemStoreHook } from '../../store/store';
 
+import MonacoEditor from './../../components/MonacoEditor.vue'
 
 const systemStore = useSystemStoreHook();
 const source = ref("")
-const mainpath = "/Users/lixu/play/doc/main.typ"
+
 const imgUrl = ref(defaultUrl);
+
+const layoutcls = computed(() =>{
+   
+    if(systemStore.editView && (!systemStore.preview) ) {
+        return 'single-left'
+    } else if ((!systemStore.editView) && systemStore.preview ) {
+        return 'single-right'
+    } else {
+        return ''
+    }
+})
 
 const readDefaultContent = async () => {
     let filePath = unref(systemStore.editingFilePath)
@@ -38,7 +51,7 @@ const readDefaultContent = async () => {
     }
     const contents = await readTextFile(filePath);
     source.value = contents;
-    console.log(contents)
+
 }
 const renderPage = async () => {
     try {
@@ -53,28 +66,39 @@ const renderPage = async () => {
 }
 
 const onTest = async () => {
-    await renderPage()
+    console.log(await navigator.clipboard.readText())
+    // await renderPage()
 }
 
 const onCompile = async () =>{
    const mainpath = systemStore.editingProject?.path + '/main.typ';
    console.log(mainpath)
    const res = await invoke<TypstRenderResponse>("typst_compile", { path:mainpath, content: source.value });
-   console.log(res)
+   console.log('res:', res);
+}
+
+const saveSource = async () =>{
+    await writeTextFile({ path: systemStore.editingFilePath, contents: source.value });
 }
 
 onMounted(() => {
-    readDefaultContent()
+    readDefaultContent().then(_ =>{
+      return onCompile()
+    }).then(() =>{
+        return renderPage()
+    }).catch(err =>{
+        console.log(err)
+    })
+    
+
 
     return appWindow.listen<TypstCompileEvent>("typst_compile", ({ event, payload }) => {
-      const { document, diagnostics } = payload;
+        const { document, diagnostics } = payload;
        console.log(document,diagnostics)
     });
 })
 
 watch(() => source.value, (newVal) => {
-    console.log('watch --- source :', newVal)
-
     renderPage()
 })
 
@@ -103,7 +127,7 @@ watch(() => systemStore.editingFilePath, ()=>{
         align-items: center;
         justify-content: flex-end;
         padding: 0 32px;
-        gap: 16px;
+        gap: 8px;
     }
     .source {
         grid-area: b;
@@ -118,6 +142,22 @@ watch(() => systemStore.editingFilePath, ()=>{
         img {
             width: 100%;
         }
+    }
+}
+.typster.single-left {
+    grid-template-areas: 
+            "a a"
+            "b b";
+    .source {
+       grid-area: b;
+    }
+}
+.typster.single-right {
+    grid-template-areas: 
+            "a a"
+            "b b";
+    .result {
+       grid-area: b;
     }
 }
 </style>

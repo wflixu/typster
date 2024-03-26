@@ -46,6 +46,7 @@ async fn main() {
             ipc::commands::typst_autocomplete,
             ipc::commands::clipboard_paste
         ])
+        .plugin(tauri_plugin_clipboard::init())
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

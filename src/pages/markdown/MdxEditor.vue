@@ -35,7 +35,7 @@ import { open } from '@tauri-apps/api/dialog';
 import { appDir } from '@tauri-apps/api/path';
 import { useSystemStoreHook } from '../../store/store';
 import { readTextFile, BaseDirectory, writeTextFile, readBinaryFile } from '@tauri-apps/api/fs';
-import MonacoEditor from './MonacoEditor.vue'
+import MonacoEditor from './../../components/MonacoEditor.vue'
 import { MdAstNode } from './interface';
 
 

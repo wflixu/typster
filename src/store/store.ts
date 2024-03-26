@@ -45,7 +45,24 @@ const useSystemStoreHook = defineStore("system", () => {
     editingProject.value = pr;
     window.localStorage.setItem(EDITING_PROJECT, JSON.stringify(pr));
   };
+
+  // 浏览和编辑
+  const editView = ref(true);
+  const preview = ref(true);
+
+  const toggleEditView = () => {
+    editView.value = !editView.value;
+  };
+  const togglePreview = () => {
+    preview.value = !preview.value;
+  };
+
   return {
+    editView,
+    toggleEditView,
+    preview,
+    togglePreview,
+
     editingProject,
     selectProject,
     projects,
