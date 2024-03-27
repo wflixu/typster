@@ -40,6 +40,8 @@ onMounted(() => {
     minimap: { enabled: false },
   });
   monacoEditor.onDidChangeModelContent((ev) => {
+    console.warn('-----onDidChangeModelContent',ev);
+    
     model.value = monacoEditor?.getValue() ?? "";
   });
 

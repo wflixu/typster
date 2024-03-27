@@ -5,6 +5,7 @@
                 <SidebarToggle v-if="!systemStore.showSidebar" class="toggle" />
                 <a-button size="small" :icon="h(SaveOutlined)" @click="saveSource"></a-button>
                 <a-button size="small" :icon="h(ExportOutlined)" @click="exportPdf"></a-button>
+                <a-button @click="onTest">test</a-button>
             </div>
             <div class="middle">
                 <a-radio-group v-model:value="mode" button-style="solid" size="small">
@@ -30,8 +31,8 @@
             </div>
 
             <div class="result" v-show="mode != 'edit'">
-                <template v-for="i in pages">
-                    <PreviewPage :page="i" :hash="hash" />
+                <template v-for="page in pages" :key="page.hash">
+                    <PreviewPage v-bind="page" />
                 </template>
             </div>
         </div>
@@ -45,8 +46,7 @@ import { readTextFile, writeTextFile } from '@tauri-apps/api/fs';
 import { invoke } from "@tauri-apps/api";
 import { EditOutlined, ReadOutlined, SaveOutlined, OneToOneOutlined, ExportOutlined } from '@ant-design/icons-vue'
 import defaultUrl from './../../assets/vue.svg'
-import type { IMode, TypstCompileEvent, TypstRenderResponse } from './interface';
-import { appWindow } from '@tauri-apps/api/window';
+import type { IMode, TypstCompileEvent, TypstPage, TypstRenderResponse } from './interface';
 import { useSystemStoreHook } from '../../store/store';
 import SidebarToggle from '../home/SidebarToggle.vue';
 import MonacoEditor from './../../components/MonacoEditor.vue'
@@ -59,8 +59,8 @@ const mode = ref<IMode>(systemStore.mode);
 
 
 const imgUrl = ref(defaultUrl);
-const pages = ref(0)
-const hash = ref('')
+const pages = ref<TypstPage[]>([])
+
 const layoutcls = computed(() => {
     if (mode.value == 'edit') {
         return 'single-left'
@@ -96,7 +96,6 @@ const readDefaultContent = async () => {
 const renderPage = async () => {
     try {
         const res: TypstRenderResponse = await invoke<TypstRenderResponse>("typst_render", { page: 1, scale: window.devicePixelRatio, nonce: 1 });
-
         imgUrl.value = "data:image/png;base64," + res.image;
         console.log(res)
     } catch (error) {
@@ -106,15 +105,23 @@ const renderPage = async () => {
 }
 
 const onTest = async () => {
-    console.log(await navigator.clipboard.readText())
-    // await renderPage()
+    const mainpath = systemStore.editingProject?.path + '/main.typ';
+    const res = await invoke<TypstPage[]>('typst_compile_doc',{ path: mainpath, content: source.value })
+    console.warn(res)
 }
 
 const onCompile = async () => {
     const mainpath = systemStore.editingProject?.path + '/main.typ';
     console.log(mainpath)
-    const res = await invoke<TypstRenderResponse>("typst_compile", { path: mainpath, content: source.value });
-    console.log('res:', res);
+    try {
+        const res = await invoke<TypstPage>("typst_compile_doc", { path: mainpath, content: source.value });
+        if(Array.isArray(res)) {
+            pages.value = res;
+        }
+    } catch (error) {
+        pages.value = [];
+    }
+
 }
 
 const saveSource = async () => {
@@ -130,18 +137,16 @@ onMounted(() => {
         console.log(err)
     })
 
-    return appWindow.listen<TypstCompileEvent>("typst_compile", ({ event, payload }) => {
-        const { document, diagnostics } = payload;
-        console.log("document:", document, diagnostics)
-        if (document) {
-            pages.value = document.pages;
-            hash.value = document.hash;
-        }
-    });
+   
 })
 
 watch(() => source.value, (newVal) => {
-    renderPage()
+    console.log('sdddd',source.value)
+    onCompile().then(()=>{
+        return renderPage()
+    }).catch(err => {
+        console.log(err)
+    })
 })
 
 watch(() => systemStore.editingFilePath, () => {
@@ -194,12 +199,13 @@ watch(() => systemStore.editingFilePath, () => {
 
         .result {
             flex: 1;
-            background-color: white;
+            background-color: #f1f1f1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
             overflow: auto;
             height: 100%;
         }
     }
-
-
 }
 </style>

@@ -16,6 +16,16 @@ pub struct TypstDocument {
     pub height: f64,
 }
 
+
+#[derive(Serialize, Clone, Debug)]
+pub struct TypstPage {
+    pub num: u32,
+    pub hash: String,
+    pub width: f64,
+    pub height: f64,
+    
+}
+
 #[derive(Serialize, Clone, Debug)]
 #[serde(rename_all = "snake_case")]
 pub enum TypstDiagnosticSeverity {

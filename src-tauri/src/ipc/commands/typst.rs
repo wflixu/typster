@@ -2,7 +2,7 @@ use super::{Error, Result};
 use crate::ipc::commands::project;
 use crate::ipc::model::TypstRenderResponse;
 use crate::ipc::{
-    TypstCompileEvent, TypstDiagnosticSeverity, TypstDocument, TypstSourceDiagnostic,
+    TypstCompileEvent, TypstDiagnosticSeverity, TypstDocument, TypstPage, TypstSourceDiagnostic
 };
 use crate::project::ProjectManager;
 use base64::Engine;
@@ -62,6 +62,100 @@ impl From<Completion> for TypstCompletion {
             detail: value.detail.map(|s| s.to_string()),
         }
     }
+}
+
+
+#[tauri::command]
+pub async fn typst_compile_doc<R: Runtime>(
+    window: tauri::Window<R>,
+    project_manager: tauri::State<'_, Arc<ProjectManager<R>>>,
+    path: PathBuf,
+    content: String,
+) -> Result<Vec<TypstPage>> {
+    let project = project(&window, &project_manager)?;
+
+    let mut world = project.world.lock().unwrap();
+    let source_id = world
+        .slot_update(&path, Some(content.clone()))
+        .map_err(Into::<Error>::into)?;
+
+    if !world.is_main_set() {
+        let config = project.config.read().unwrap();
+        if config.apply_main(&project, &mut world).is_err() {
+            debug!("skipped compilation for {:?} (main not set)", project);
+            return Err(Error::Unknown);
+        }
+    }
+
+    debug!("compiling {:?}: {:?}", path, project);
+    let now = Instant::now();
+    let mut tracer = Tracer::new();
+    let mut res: Vec<TypstPage> = Vec::new();
+    match typst::compile(&*world, &mut tracer) {
+        Ok(doc) => {
+            let elapsed = now.elapsed();
+            debug!(
+                "compilation succeeded for {:?} in {:?} ms",
+                project,
+                elapsed.as_millis()
+            );
+            let mut idx:u32 = 0;
+            for page in &doc.pages {
+                let mut hasher = SipHasher::new();
+                page.frame.hash(&mut hasher);
+                let hash = hex::encode(hasher.finish128().as_bytes());
+                let width  = page.frame.width().to_pt();
+                let height = page.frame.height().to_pt();
+                idx +=1;
+                let  pag =  TypstPage {
+                    num: idx,
+                    width,
+                    height,
+                    hash: hash.clone()
+                };
+                res.push(pag);
+            }
+
+            project.cache.write().unwrap().document = Some(doc);
+
+        }
+        Err(diagnostics) => {
+            debug!(
+                "compilation failed with {:?} diagnostics",
+                diagnostics.len()
+            );
+
+            let source = world.source(source_id);
+            let diagnostics: Vec<TypstSourceDiagnostic> = match source {
+                Ok(source) => diagnostics
+                    .iter()
+                    .filter(|d| d.span.id() == Some(source_id))
+                    .filter_map(|d| {
+                        let span = source.find(d.span)?;
+                        let range = span.range();
+                        let start = content[..range.start].chars().count();
+                        let size = content[range.start..range.end].chars().count();
+
+                        let message = d.message.to_string();
+                        Some(TypstSourceDiagnostic {
+                            range: start..start + size,
+                            severity: match d.severity {
+                                Severity::Error => TypstDiagnosticSeverity::Error,
+                                Severity::Warning => TypstDiagnosticSeverity::Warning,
+                            },
+                            message,
+                            hints: d.hints.iter().map(|hint| hint.to_string()).collect(),
+                        })
+                    })
+                    .collect(),
+                Err(_) => vec![],
+            };
+
+           
+        }
+    }
+
+    Ok(res)
 }
 
 #[tauri::command]

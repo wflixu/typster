@@ -16,6 +16,12 @@ export interface TypstDocument {
   width: number;
   height: number;
 }
+export interface TypstPage {
+  hash: string;
+  width: number;
+  height: number;
+  num: number;
+}
 
 export type TypstDiagnosticSeverity = "error" | "warning";
 
