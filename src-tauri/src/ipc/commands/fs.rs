@@ -4,6 +4,7 @@ use crate::project::{Project, ProjectManager};
 use enumset::EnumSetType;
 use log::info;
 use serde::Serialize;
+use typst::foundations::Smart;
 use std::cmp::Ordering;
 use std::fs;
 use std::fs::{File, OpenOptions};
@@ -37,6 +38,26 @@ pub async fn load_project_from_path<R: Runtime>(
     project_manager.set_project(&window, Some(project));
     info!("succeeded load_project_from_path {}", &path);
     Ok(())
+}
+
+
+#[tauri::command]
+pub async fn export_pdf<R: Runtime>(
+    window: Window<R>,
+    project_manager: State<'_, Arc<ProjectManager<R>>>,
+    path: String,
+) -> Result<u64> {
+    info!("start export pdf to path {}", &path);
+    let  path_buf = PathBuf::from(&path);
+    if let Some(project) = project_manager.get_project(&window) {
+        let cache = project.cache.read().unwrap();
+        if let Some(doc) = &cache.document {
+            let pdf = typst_pdf::pdf(doc, Smart::Auto, None);
+            let _ = fs::write(path_buf, pdf);
+        }
+    }
+
+    Ok(1)
 }
 
 /// Reads raw bytes from a specified path.

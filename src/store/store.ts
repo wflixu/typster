@@ -1,6 +1,7 @@
 import { createPinia, defineStore } from "pinia";
 import { MaybeRef, reactive, ref, toValue, unref } from "vue";
 import { IProject } from "../pages/project/interface";
+import { IMode } from "../pages/typst/interface";
 
 const pinia = createPinia();
 const EDITING_FILE = "EDITING_FILE";
@@ -46,22 +47,22 @@ const useSystemStoreHook = defineStore("system", () => {
     window.localStorage.setItem(EDITING_PROJECT, JSON.stringify(pr));
   };
 
-  // 浏览和编辑
-  const editView = ref(true);
-  const preview = ref(true);
-
-  const toggleEditView = () => {
-    editView.value = !editView.value;
+  const mode = ref<IMode>("all");
+  const setMode = (m: IMode) => {
+    mode.value = m;
   };
-  const togglePreview = () => {
-    preview.value = !preview.value;
+
+  const showSidebar = ref(true);
+  const toggleShowSidebar = (show?: boolean) => {
+    showSidebar.value = show ?? !showSidebar.value;
   };
 
   return {
-    editView,
-    toggleEditView,
-    preview,
-    togglePreview,
+    mode,
+    setMode,
+
+    showSidebar,
+    toggleShowSidebar,
 
     editingProject,
     selectProject,

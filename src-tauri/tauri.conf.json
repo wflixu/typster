@@ -46,9 +46,9 @@
         "writeText": true
       },
       "window": {
-        "all": false,
-        "startDragging": true
-
+        "all": true,
+        "startDragging": true,
+        "setPosition": true
       }
     },
     "bundle": {
@@ -74,7 +74,8 @@
         "fullscreen": false,
         "resizable": true,
         "title": "typster",
-        "hiddenTitle": false,
+        
+        "hiddenTitle": true,
         "titleBarStyle": "Overlay",
         "theme": "Light",
         "x": 2000,

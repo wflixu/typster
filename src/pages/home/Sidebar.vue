@@ -1,5 +1,6 @@
 <template>
   <div class="sidebar">
+    <SidebarToggle v-if="systemStore.showSidebar" class="toggle"/>
     <div class="title">
       <span>
         Files
@@ -7,7 +8,7 @@
       <a-button :icon="h(PlusOutlined)"></a-button>
     </div>
     <a-directory-tree class="dir" :blockNode="true" :height="300" v-model:expandedKeys="expandedKeys"
-      v-model:selectedKeys="selectedKeys"  :tree-data="treeData" @select="onSelect"></a-directory-tree>
+      v-model:selectedKeys="selectedKeys" :tree-data="treeData" @select="onSelect"></a-directory-tree>
 
     <div class="footer">
       footer
@@ -17,11 +18,12 @@
 
 <script setup lang="ts">
 import type { TreeProps } from 'ant-design-vue';
-import { ref, h, reactive } from 'vue';
+import { ref, h, reactive, onMounted } from 'vue';
 import { PlusOutlined } from '@ant-design/icons-vue'
 import { readDir, BaseDirectory, FileEntry } from '@tauri-apps/api/fs';
 import { useSystemStoreHook } from '../../store/store';
 import { DataNode } from 'ant-design-vue/es/tree';
+import SidebarToggle from './SidebarToggle.vue';
 
 const systemStore = useSystemStoreHook();
 
@@ -29,25 +31,27 @@ const expandedKeys = ref<string[]>([]);
 const selectedKeys = ref<string[]>([]);
 const treeData: TreeProps['treeData'] = reactive([]);
 
+
 const initFiles = async () => {
   console.log(systemStore.editingProject)
   const curProject = systemStore.editingProject
   if (!curProject) {
     return
   }
- console.log('-----')
+
   const root = {
-    title: curProject.path.split('/').pop() ,
-    key:curProject.path,
+    title: curProject.path.split('/').pop(),
+    key: curProject.path,
     children: []
   }
+  
 
   // Reads the `$APPDATA/users` directory recursively
-  const entries = await readDir( root.key, {  recursive: true });
+  const entries = await readDir(root.key, { recursive: true });
 
   function processEntries(entries: FileEntry[], parent: DataNode) {
     for (const entry of entries) {
-      const node = {title: entry.path.split('/').pop(), key:entry.path,  children: []}
+      const node = { title: entry.path.split('/').pop(), key: entry.path, children: [] }
       console.log(`Entry: ${entry.path}`);
       if (entry.children) {
         processEntries(entry.children, node)
@@ -57,16 +61,25 @@ const initFiles = async () => {
   }
   processEntries(entries, root)
   treeData.push(root)
+
+  if (systemStore.editingFilePath) {
+    selectedKeys.value.push(systemStore.editingFilePath)
+    expandedKeys.value.push(curProject.path)
+  }
 }
 
-initFiles().then(res=>{
-  console.log(JSON.stringify(treeData))
-});
 
-const onSelect = (selectedKeys: string[]) =>{
-   console.log(selectedKeys)
-   systemStore.setEditingFilePath(selectedKeys[0])
+
+const onSelect = (selectedKeys: string[]) => {
+  console.log(selectedKeys)
+  systemStore.setEditingFilePath(selectedKeys[0])
 }
+
+onMounted(() => {
+  initFiles().then(res => {
+    console.log(JSON.stringify(treeData))
+  });
+})
 
 
 </script>
@@ -77,7 +90,14 @@ const onSelect = (selectedKeys: string[]) =>{
   padding-top: 36px;
   display: flex;
   flex-direction: column;
-
+  box-sizing: border-box;
+  border-right: 1px solid #ddd;
+  position: relative;
+  .toggle {
+    position: absolute;
+    right: 8px;
+    top: 0;
+  }
   .title {
     height: 60px;
     padding: 20px 16px 0 16px;
@@ -88,13 +108,12 @@ const onSelect = (selectedKeys: string[]) =>{
     margin-bottom: 16px
   }
 
-  .dir {
+  & :deep(.dir) {
     flex: 1;
-    height: calc(100% - 200px);
   }
 
   .footer {
-    height: 60px;
+    height: 42px;
     border-top: 1px solid #ddd;
     margin-top: 20px;
     display: flex;

@@ -14,4 +14,7 @@ ul {
 .mb-4 {
     margin-bottom: 16px;
 }
+.bbox {
+  box-sizing: border-box;
+}
 

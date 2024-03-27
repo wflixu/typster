@@ -48,13 +48,9 @@ const isEmpty = computed(() =>{
    return list.value?.length < 1;
 });
 
-const onSelect = (pr: IProject) =>{
+const onSelect = async (pr: IProject) =>{
     systemStore.selectProject(pr);
-    invoke('load_project_from_path', {path: pr.path}).then(res=>{
-
-    }).catch(err=>{
-        
-    })
+    await invoke('load_project_from_path', {path: pr.path});
     router.push('/home')
 }
 

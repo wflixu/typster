@@ -1,27 +1,24 @@
 <template>
-    <main :class="{'expand': expand}">
-        <SidebarToggle v-model:expand="expand" />
-        <Sidebar v-show="expand"/>
+    <main :class="{'expand': systemStore.showSidebar}">
+        <MoveBar/>
+        <Sidebar v-show="systemStore.showSidebar"/>
         <TypstEditor />
     </main>
 </template>
 
 <script setup lang="ts">
 import TypstEditor from '../typst/TypstEditor.vue'
-import SidebarToggle from './SidebarToggle.vue'
 import Sidebar from './Sidebar.vue';
-import { ref } from 'vue';
+import MoveBar from './../../components/MoveBar.vue'
+import { useSystemStoreHook } from '../../store/store';
 
-const expand = ref(true);
-
+const systemStore =  useSystemStoreHook()
 
 
 </script>
 
 <style scoped>
 main {
-    background-color: gold;
-    border: 1px solid red;
     height: 100vh;
     display: grid;
     grid-template-columns:  1fr;

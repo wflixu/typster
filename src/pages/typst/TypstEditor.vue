@@ -1,53 +1,93 @@
 <template>
     <div class="typster" :class="layoutcls">
-        <div class="actions">
-            <button @click="onTest">test</button>
-            <button @click="onCompile">compile</button>
-            <a-button :icon="h(SaveOutlined)" @click="saveSource"></a-button>
-            <a-button :icon="h(EditOutlined)" @click="systemStore.toggleEditView()"></a-button>
-            <a-button :icon="h(ReadOutlined)" @click="systemStore.togglePreview()"></a-button>
+        <div class="actions" :class="{ 'expand': systemStore.showSidebar }">
+            <div class="left">
+                <SidebarToggle v-if="!systemStore.showSidebar" class="toggle" />
+                <a-button size="small" :icon="h(SaveOutlined)" @click="saveSource"></a-button>
+                <a-button size="small" :icon="h(ExportOutlined)" @click="exportPdf"></a-button>
+            </div>
+            <div class="middle">
+                <a-radio-group v-model:value="mode" button-style="solid" size="small">
+                    <a-radio-button value="all">
+                        <OneToOneOutlined />
+                    </a-radio-button>
+                    <a-radio-button value="edit">
+                        <EditOutlined />
+                    </a-radio-button>
+                    <a-radio-button value="preview">
+                        <ReadOutlined />
+                    </a-radio-button>
+                </a-radio-group>
+            </div>
+            <div class="right">
+
+            </div>
+
         </div>
-        <div class="source" v-show="systemStore.editView">
-            <MonacoEditor v-model="source"></MonacoEditor>
+        <div class="content">
+            <div class="source bbox" v-if="mode != 'preview'">
+                <MonacoEditor :mode="mode" v-model="source"></MonacoEditor>
+            </div>
+
+            <div class="result" v-show="mode != 'edit'">
+                <template v-for="i in pages">
+                    <PreviewPage :page="i" :hash="hash" />
+                </template>
+            </div>
         </div>
-        <div class="result" v-show="systemStore.preview">
-            <img :src=imgUrl alt="">
-        </div>
+
     </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, unref, watch,h, computed } from 'vue';
+import { onMounted, ref, unref, watch, h, computed } from 'vue';
 import { readTextFile, writeTextFile } from '@tauri-apps/api/fs';
 import { invoke } from "@tauri-apps/api";
-import {EditOutlined, ReadOutlined, SaveOutlined} from '@ant-design/icons-vue'
+import { EditOutlined, ReadOutlined, SaveOutlined, OneToOneOutlined, ExportOutlined } from '@ant-design/icons-vue'
 import defaultUrl from './../../assets/vue.svg'
-import { TypstCompileEvent, TypstRenderResponse } from './interface';
+import type { IMode, TypstCompileEvent, TypstRenderResponse } from './interface';
 import { appWindow } from '@tauri-apps/api/window';
 import { useSystemStoreHook } from '../../store/store';
-
+import SidebarToggle from '../home/SidebarToggle.vue';
 import MonacoEditor from './../../components/MonacoEditor.vue'
-
+import PreviewPage from "./PreviewPage.vue"
+import { save } from '@tauri-apps/api/dialog';
 const systemStore = useSystemStoreHook();
 const source = ref("")
 
-const imgUrl = ref(defaultUrl);
+const mode = ref<IMode>(systemStore.mode);
 
-const layoutcls = computed(() =>{
-   
-    if(systemStore.editView && (!systemStore.preview) ) {
+
+const imgUrl = ref(defaultUrl);
+const pages = ref(0)
+const hash = ref('')
+const layoutcls = computed(() => {
+    if (mode.value == 'edit') {
         return 'single-left'
-    } else if ((!systemStore.editView) && systemStore.preview ) {
+    } else if (mode.value == 'preview') {
         return 'single-right'
     } else {
         return ''
     }
 })
 
+const exportPdf = async () => {
+    console.log(systemStore.editingProject)
+
+    const filePath = await save({
+        filters: [{
+            name: 'export_pdf',
+            extensions: ['pdf']
+        }]
+    });
+    const res = await invoke('export_pdf', { path: filePath })
+    console.log(res);
+}
+
 const readDefaultContent = async () => {
     let filePath = unref(systemStore.editingFilePath)
-    if(!filePath) {
-      return;
+    if (!filePath) {
+        return;
     }
     const contents = await readTextFile(filePath);
     source.value = contents;
@@ -60,7 +100,7 @@ const renderPage = async () => {
         imgUrl.value = "data:image/png;base64," + res.image;
         console.log(res)
     } catch (error) {
-       console.log(error)
+        console.log(error)
     }
 
 }
@@ -70,31 +110,33 @@ const onTest = async () => {
     // await renderPage()
 }
 
-const onCompile = async () =>{
-   const mainpath = systemStore.editingProject?.path + '/main.typ';
-   console.log(mainpath)
-   const res = await invoke<TypstRenderResponse>("typst_compile", { path:mainpath, content: source.value });
-   console.log('res:', res);
+const onCompile = async () => {
+    const mainpath = systemStore.editingProject?.path + '/main.typ';
+    console.log(mainpath)
+    const res = await invoke<TypstRenderResponse>("typst_compile", { path: mainpath, content: source.value });
+    console.log('res:', res);
 }
 
-const saveSource = async () =>{
+const saveSource = async () => {
     await writeTextFile({ path: systemStore.editingFilePath, contents: source.value });
 }
 
 onMounted(() => {
-    readDefaultContent().then(_ =>{
-      return onCompile()
-    }).then(() =>{
+    readDefaultContent().then(_ => {
+        return onCompile()
+    }).then(() => {
         return renderPage()
-    }).catch(err =>{
+    }).catch(err => {
         console.log(err)
     })
-    
-
 
     return appWindow.listen<TypstCompileEvent>("typst_compile", ({ event, payload }) => {
         const { document, diagnostics } = payload;
-       console.log(document,diagnostics)
+        console.log("document:", document, diagnostics)
+        if (document) {
+            pages.value = document.pages;
+            hash.value = document.hash;
+        }
     });
 })
 
@@ -102,7 +144,7 @@ watch(() => source.value, (newVal) => {
     renderPage()
 })
 
-watch(() => systemStore.editingFilePath, ()=>{
+watch(() => systemStore.editingFilePath, () => {
     readDefaultContent();
 })
 
@@ -113,51 +155,51 @@ watch(() => systemStore.editingFilePath, ()=>{
 
 <style scoped>
 .typster {
+    --action-bar: 36px;
     height: 100%;
-    background-color: aqua;
-    display: grid;
-    grid-template-areas: 
-            "a a"
-            "b c";
-   grid-template-rows: 36px 1fr; /* 3.各区域 宽高设置 */
-   grid-template-columns: 1fr 1fr;
+    overflow: hidden;
+
     .actions {
-        grid-area: a;
+        height: var(--action-bar);
         display: flex;
         align-items: center;
-        justify-content: flex-end;
+        justify-content: space-between;
         padding: 0 32px;
+        padding-left: 72px;
         gap: 8px;
-    }
-    .source {
-        grid-area: b;
-        background-color: coral;
-        padding: 16px;
-    }
+        border-bottom: 1px solid #ddd;
 
-    .result {
-        grid-area: c;
-        background-color: white;
+        &.expand {
+            padding-left: 32px;
+        }
 
-        img {
-            width: 100%;
+        .left,
+        .right,
+        .middle {
+            display: inline-flex;
+            gap: 8px;
+            align-items: center;
         }
     }
-}
-.typster.single-left {
-    grid-template-areas: 
-            "a a"
-            "b b";
-    .source {
-       grid-area: b;
+
+    .content {
+        display: flex;
+        height: calc(100% - var(--action-bar));
+
+        .source {
+            flex: 1;
+            overflow: auto;
+            height: 100%;
+        }
+
+        .result {
+            flex: 1;
+            background-color: white;
+            overflow: auto;
+            height: 100%;
+        }
     }
-}
-.typster.single-right {
-    grid-template-areas: 
-            "a a"
-            "b b";
-    .result {
-       grid-area: b;
-    }
+
+
 }
 </style>

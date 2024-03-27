@@ -25,3 +25,5 @@ export interface TypstSourceDiagnostic {
   message: string;
   hints: string[];
 }
+
+export type IMode = "all" | "edit" | "preview";

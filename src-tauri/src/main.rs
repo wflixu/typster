@@ -29,8 +29,8 @@ async fn main() {
     }
 
     tauri::Builder::default()
-        .menu(build_menu())
-        .on_menu_event(handle_menu_event)
+        // .menu(build_menu())
+        // .on_menu_event(handle_menu_event)
         .manage(project_manager)
         .invoke_handler(tauri::generate_handler![
             cmd::greet,
@@ -44,9 +44,9 @@ async fn main() {
             ipc::commands::typst_compile,
             ipc::commands::typst_render,
             ipc::commands::typst_autocomplete,
+            ipc::commands::export_pdf,
             ipc::commands::clipboard_paste
         ])
-        .plugin(tauri_plugin_clipboard::init())
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
@@ -71,12 +71,12 @@ fn build_menu() -> Menu {
 
     let mut file_menu = Menu::new()
         .add_item(
-            CustomMenuItem::new("file_open_project", "Open Project").accelerator("CmdOrCtrl+O"),
+            CustomMenuItem::new("file_open_project", "Open Project"),
         )
         .add_submenu(Submenu::new(
             "Export",
             Menu::new().add_item(
-                CustomMenuItem::new("file_export_pdf", "Export PDF").accelerator("CmdOrCtrl+E"),
+                CustomMenuItem::new("file_export_pdf", "Export PDF"),
             ),
         ));
 
