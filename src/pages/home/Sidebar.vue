@@ -42,6 +42,7 @@ const initFiles = async () => {
   const root = {
     title: curProject.path.split('/').pop(),
     key: curProject.path,
+    selectable: false,
     children: []
   }
   
@@ -51,9 +52,12 @@ const initFiles = async () => {
 
   function processEntries(entries: FileEntry[], parent: DataNode) {
     for (const entry of entries) {
-      const node = { title: entry.path.split('/').pop(), key: entry.path, children: [] }
-      console.log(`Entry: ${entry.path}`);
+      if(entry.name?.endsWith('.DS_Store')) {
+        continue;
+      }
+      const node = { title: entry.path.split('/').pop(), key: entry.path, children: [], selectable: true };
       if (entry.children) {
+        node.selectable = false;
         processEntries(entry.children, node)
       }
       parent.children?.push(node)

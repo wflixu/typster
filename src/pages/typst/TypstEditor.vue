@@ -5,7 +5,7 @@
                 <SidebarToggle v-if="!systemStore.showSidebar" class="toggle" />
                 <a-button size="small" :icon="h(SaveOutlined)" @click="saveSource"></a-button>
                 <a-button size="small" :icon="h(ExportOutlined)" @click="exportPdf"></a-button>
-                <a-button @click="onTest">test</a-button>
+                <!-- <a-button @click="onTest">test</a-button> -->
             </div>
             <div class="middle">
                 <a-radio-group v-model:value="mode" button-style="solid" size="small">
@@ -31,9 +31,7 @@
             </div>
 
             <div class="result" v-show="mode != 'edit'">
-                <template v-for="page in pages" :key="page.hash">
-                    <PreviewPage v-bind="page" />
-                </template>
+                <PreviewPage v-for="page in pages" :key="page.hash" v-bind="page" />
             </div>
         </div>
 
@@ -45,20 +43,20 @@ import { onMounted, ref, unref, watch, h, computed } from 'vue';
 import { readTextFile, writeTextFile } from '@tauri-apps/api/fs';
 import { invoke } from "@tauri-apps/api";
 import { EditOutlined, ReadOutlined, SaveOutlined, OneToOneOutlined, ExportOutlined } from '@ant-design/icons-vue'
-import defaultUrl from './../../assets/vue.svg'
-import type { IMode, TypstCompileEvent, TypstPage, TypstRenderResponse } from './interface';
+import type { IMode, TypstPage } from './interface';
 import { useSystemStoreHook } from '../../store/store';
 import SidebarToggle from '../home/SidebarToggle.vue';
 import MonacoEditor from './../../components/MonacoEditor.vue'
 import PreviewPage from "./PreviewPage.vue"
 import { save } from '@tauri-apps/api/dialog';
+import { message } from 'ant-design-vue';
+
 const systemStore = useSystemStoreHook();
 const source = ref("")
 
 const mode = ref<IMode>(systemStore.mode);
 
 
-const imgUrl = ref(defaultUrl);
 const pages = ref<TypstPage[]>([])
 
 const layoutcls = computed(() => {
@@ -84,38 +82,28 @@ const exportPdf = async () => {
     console.log(res);
 }
 
-const readDefaultContent = async () => {
+const readText = async () => {
     let filePath = unref(systemStore.editingFilePath)
     if (!filePath) {
-        return;
+        filePath = systemStore.editingProject?.path + 'main.typ'
     }
     const contents = await readTextFile(filePath);
+    systemStore.setEditingFilePath(filePath);
     source.value = contents;
-
-}
-const renderPage = async () => {
-    try {
-        const res: TypstRenderResponse = await invoke<TypstRenderResponse>("typst_render", { page: 1, scale: window.devicePixelRatio, nonce: 1 });
-        imgUrl.value = "data:image/png;base64," + res.image;
-        console.log(res)
-    } catch (error) {
-        console.log(error)
-    }
-
 }
 
 const onTest = async () => {
     const mainpath = systemStore.editingProject?.path + '/main.typ';
-    const res = await invoke<TypstPage[]>('typst_compile_doc',{ path: mainpath, content: source.value })
+    const res = await invoke<TypstPage[]>('typst_compile_doc', { path: mainpath, content: source.value })
     console.warn(res)
 }
 
-const onCompile = async () => {
+const compile_typst_source = async () => {
     const mainpath = systemStore.editingProject?.path + '/main.typ';
-    console.log(mainpath)
     try {
         const res = await invoke<TypstPage>("typst_compile_doc", { path: mainpath, content: source.value });
-        if(Array.isArray(res)) {
+        console.warn('compile_doc:', res);
+        if (Array.isArray(res)) {
             pages.value = res;
         }
     } catch (error) {
@@ -125,32 +113,39 @@ const onCompile = async () => {
 }
 
 const saveSource = async () => {
-    await writeTextFile({ path: systemStore.editingFilePath, contents: source.value });
+    try {
+        console.log(source.value)
+        await writeTextFile({ path: systemStore.editingFilePath, contents: source.value });
+        message.info("保存成功")
+        await compile_typst_source();
+    } catch (error) {
+        message.warn(`保存失败 : ${error}`);
+    }
 }
 
-onMounted(() => {
-    readDefaultContent().then(_ => {
-        return onCompile()
-    }).then(() => {
-        return renderPage()
-    }).catch(err => {
-        console.log(err)
-    })
 
-   
+const init = async () => {
+    try {
+        await readText();
+        await compile_typst_source();
+    } catch (error) {
+        console.log(error);
+    }
+
+}
+
+onMounted(async () => {
+
+    await init();
+
 })
 
 watch(() => source.value, (newVal) => {
-    console.log('sdddd',source.value)
-    onCompile().then(()=>{
-        return renderPage()
-    }).catch(err => {
-        console.log(err)
-    })
+
 })
 
-watch(() => systemStore.editingFilePath, () => {
-    readDefaultContent();
+watch(() => systemStore.editingFilePath, async () => {
+    await readText();
 })
 
 

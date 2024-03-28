@@ -137,6 +137,7 @@ pub async fn typst_compile_doc<R: Runtime>(
                         let size = content[range.start..range.end].chars().count();
 
                         let message = d.message.to_string();
+                        info!("############## {}", &message);
                         Some(TypstSourceDiagnostic {
                             range: start..start + size,
                             severity: match d.severity {
@@ -150,6 +151,10 @@ pub async fn typst_compile_doc<R: Runtime>(
                     .collect(),
                 Err(_) => vec![],
             };
+
+            info!("############## {:?}", &diagnostics);
+
+
 
            
         }
