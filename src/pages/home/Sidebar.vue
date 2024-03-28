@@ -12,7 +12,7 @@
       <template #title="{ key: treeKey, title }">
         <a-dropdown :trigger="['contextmenu']">
           <span>{{ title }}</span>
-          <template #overlay >
+          <template #overlay>
             <a-menu @click="({ key: menuKey }) => onContextMenuClick(treeKey, menuKey)">
               <a-menu-item key="delete">删除</a-menu-item>
             </a-menu>
@@ -22,20 +22,38 @@
     </a-directory-tree>
 
     <div class="footer">
-      footer
+      <a-dropdown trigger="click">
+        <div class="hover">
+          <FolderOpenOutlined />
+          <span class="ml-2">
+            {{ systemStore.editingProject?.path }}
+          </span>
+        </div>
+
+        <template #overlay>
+          <a-menu @select="onSelectProject" selectable>
+            <a-menu-item v-for="pro in projects" :key="pro.path">
+              <span>{{ pro.title }}</span> : <span>{{ pro.path }}</span>
+            </a-menu-item>
+            
+          </a-menu>
+        </template>
+      </a-dropdown>
+
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import type { TreeProps } from 'ant-design-vue';
-import { ref, h, reactive, onMounted } from 'vue';
-import { PlusOutlined } from '@ant-design/icons-vue'
+import { ref, h, reactive, onMounted, computed } from 'vue';
+import { PlusOutlined, FolderOpenOutlined } from '@ant-design/icons-vue'
 import { readDir, BaseDirectory, FileEntry, writeTextFile, removeFile } from '@tauri-apps/api/fs';
 import { useSystemStoreHook } from '../../store/store';
 import { DataNode } from 'ant-design-vue/es/tree';
 import SidebarToggle from './SidebarToggle.vue';
 import { save } from '@tauri-apps/api/dialog';
+import { router } from '../../router';
 
 const systemStore = useSystemStoreHook();
 
@@ -43,6 +61,9 @@ const expandedKeys = ref<string[]>([]);
 const selectedKeys = ref<string[]>([]);
 const treeData: TreeProps['treeData'] = reactive([]);
 
+const projects = computed(() =>{
+  return systemStore.projects;
+})
 
 const initFiles = async () => {
   if (treeData.length > 0) {
@@ -89,9 +110,9 @@ const initFiles = async () => {
 
 const onContextMenuClick = async (treeKey: string, menuKey: string | number) => {
   console.log(`treeKey: ${treeKey}, menuKey: ${menuKey}`);
-  if(menuKey == 'delete' && treeKey) {
-      await  removeFile(treeKey) ;
-      await initFiles();
+  if (menuKey == 'delete' && treeKey) {
+    await removeFile(treeKey);
+    await initFiles();
   }
 };
 
@@ -113,6 +134,16 @@ const onCreateFile = async () => {
   if (filePath) {
     await writeTextFile({ path: filePath, contents: ' ' });
     await initFiles();
+  }
+}
+
+const onSelectProject = ({key}) =>{
+  console.log(key)
+  let selectedProject = systemStore.projects.find(item => item.path == key)
+  if(selectedProject) {
+    systemStore.selectProject(selectedProject)
+    systemStore.setEditingFilePath(selectedProject.path + '/main.typ');
+    window.location.reload();
   }
 }
 

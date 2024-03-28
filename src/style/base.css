@@ -6,7 +6,12 @@ ul {
 
 
 
-
+.ml-4 {
+  margin-left: 16px;
+}
+.ml-2 {
+  margin-left: 8px;
+}
 
 .w-full {
     width: 100%;
@@ -16,5 +21,8 @@ ul {
 }
 .bbox {
   box-sizing: border-box;
+}
+.hover {
+  cursor: pointer;
 }
 

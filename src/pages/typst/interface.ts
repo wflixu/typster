@@ -51,6 +51,7 @@ export interface TypstCompletion {
 }
 
 export type IMode = "all" | "edit" | "preview";
+export type IAdjust = "full" | "width" | "height";
 
 export interface TypstCompleteResponse {
   offset: number;

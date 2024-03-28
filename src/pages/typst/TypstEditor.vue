@@ -3,8 +3,20 @@
         <div class="actions" :class="{ 'expand': systemStore.showSidebar }">
             <div class="left">
                 <SidebarToggle v-if="!systemStore.showSidebar" class="toggle" />
-                <a-button size="small" :icon="h(SaveOutlined)" @click="saveSource"></a-button>
-                <a-button size="small" :icon="h(ExportOutlined)" @click="exportPdf"></a-button>
+                <a-button size="small" @click="saveSource">
+                    <template #icon>
+                        <a-tooltip title="保存">
+                            <SaveOutlined />
+                        </a-tooltip>
+                    </template>
+                </a-button>
+                <a-button size="small"  @click="exportPdf">
+                    <template #icon>
+                        <a-tooltip title="导出PDF">
+                            <ExportOutlined />
+                        </a-tooltip>
+                    </template>
+                </a-button>
                 <!-- <a-button @click="onTest">test</a-button> -->
             </div>
             <div class="middle">
@@ -21,9 +33,20 @@
                 </a-radio-group>
             </div>
             <div class="right">
-
+                <!-- <template v-if="mode == 'preview'">
+                    <a-radio-group v-model:value="adjust" button-style="solid" size="small">
+                        <a-radio-button value="full">
+                            <OneToOneOutlined />
+                        </a-radio-button>
+                        <a-radio-button value="width">
+                            <EditOutlined />
+                        </a-radio-button>
+                        <a-radio-button value="height">
+                            <ReadOutlined />
+                        </a-radio-button>
+                    </a-radio-group>
+                </template> -->
             </div>
-
         </div>
         <div class="content">
             <div class="source bbox" v-if="mode != 'preview'">
@@ -43,7 +66,7 @@ import { onMounted, ref, unref, watch, h, computed, nextTick } from 'vue';
 import { readTextFile, writeTextFile } from '@tauri-apps/api/fs';
 import { invoke } from "@tauri-apps/api";
 import { EditOutlined, ReadOutlined, SaveOutlined, OneToOneOutlined, ExportOutlined } from '@ant-design/icons-vue'
-import type { IMode, TypstPage } from './interface';
+import type { IAdjust, IMode, TypstPage } from './interface';
 import { useSystemStoreHook } from '../../store/store';
 import SidebarToggle from '../home/SidebarToggle.vue';
 import MonacoEditor from './../../components/MonacoEditor.vue'
@@ -55,6 +78,7 @@ const systemStore = useSystemStoreHook();
 const source = ref("")
 
 const mode = ref<IMode>(systemStore.mode);
+const adjust = ref<IAdjust>('full');
 
 
 const pages = ref<TypstPage[]>([])
