@@ -33,7 +33,7 @@ onMounted(() => {
   }
   monacoEditor = monaco.editor.create(boxRef.value!, {
     value: model.value,
-    language: "mdx",
+    language: "typst",
     fontSize: 16,
     lineHeight: 28,
     scrollBeyondLastColumn: 2,

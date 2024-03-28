@@ -22,7 +22,9 @@
     "pinia": "^2.1.7",
     "today-ui": "^0.0.23",
     "vue": "^3.4.21",
-    "vue-router": "^4.3.0"
+    "vue-router": "^4.3.0",
+    "vscode-oniguruma": "^2.0.1",
+    "vscode-textmate": "^9.0.0"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^1.5.10",

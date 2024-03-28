@@ -19,10 +19,6 @@ const props = defineProps({
 })
 const el = ref();
 
-
-
-
-
 const pageUrl = ref(defaultUrl)
 const nonce = 1;
 const renderPage = async () => {
@@ -51,9 +47,9 @@ let intersectionObserver = new IntersectionObserver((entries) => {
 
 
 onMounted(() => {
-    // renderPage().catch(err => {
-    //     console.warn(err)
-    // })
+    renderPage().catch(err => {
+        console.warn(err)
+    })
     if (el.value) {
         intersectionObserver.observe(el.value);
     }

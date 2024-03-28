@@ -39,7 +39,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, unref, watch, h, computed } from 'vue';
+import { onMounted, ref, unref, watch, h, computed, nextTick } from 'vue';
 import { readTextFile, writeTextFile } from '@tauri-apps/api/fs';
 import { invoke } from "@tauri-apps/api";
 import { EditOutlined, ReadOutlined, SaveOutlined, OneToOneOutlined, ExportOutlined } from '@ant-design/icons-vue'
@@ -115,9 +115,9 @@ const compile_typst_source = async () => {
 const saveSource = async () => {
     try {
         console.log(source.value)
+        await compile_typst_source();
         await writeTextFile({ path: systemStore.editingFilePath, contents: source.value });
         message.info("保存成功")
-        await compile_typst_source();
     } catch (error) {
         message.warn(`保存失败 : ${error}`);
     }

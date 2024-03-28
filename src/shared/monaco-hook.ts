@@ -1,8 +1,16 @@
-// @ts-nocheck
-
 import * as monaco from "monaco-editor";
 import editorWorker from "monaco-editor/esm/vs/editor/editor.worker?worker";
 import jsonWorker from "monaco-editor/esm/vs/language/json/json.worker?worker";
+import typstConfig from "./lang/typst-config.json";
+import bibtex from "./lang/bibtex.json";
+import * as oniguruma from "vscode-oniguruma";
+import { wireTextMateGrammars } from "./lang/grammar";
+import typstTm from "./lang/typst-tm.json";
+
+import { TypstCompletionProvider } from "./lang/completion";
+import { Registry } from "vscode-textmate";
+
+type IMonarchLanguage = monaco.languages.IMonarchLanguage;
 
 // @ts-ignore
 self.MonacoEnvironment = {
@@ -14,39 +22,29 @@ self.MonacoEnvironment = {
   },
 };
 
-import { language as mdxLanguage } from "monaco-editor/esm/vs/basic-languages/mdx/mdx.js";
-
-monaco.languages.register({ id: "mdx" });
-
-monaco.languages.registerCompletionItemProvider("mdx", {
-  provideCompletionItems: (model, position) => {
-    // 获取当前光标前的文本
-    const word = model.getWordUntilPosition(position);
-    const range = {
-      startLineNumber: position.lineNumber,
-      endLineNumber: position.lineNumber,
-      startColumn: word.startColumn,
-      endColumn: position.column,
-    };
-
-    // 这里可以根据 MDX 的语法规则和关键字来提供补全建议
-    // 以下是一个简单的示例，只返回固定的建议列表
-    const suggestions = [
-      {
-        label: "SELECT",
-        kind: monaco.languages.CompletionItemKind.Keyword,
-        insertText: "SELECT",
-        range: range,
-      },
-      {
-        label: "FROM",
-        kind: monaco.languages.CompletionItemKind.Keyword,
-        insertText: "FROM",
-        range: range,
-      },
-      // ... 添加更多的补全建议
-    ];
-
-    return { suggestions };
+// Register TextMate grammars
+const registry = new Registry({
+  onigLib: Promise.resolve(oniguruma),
+  // @ts-ignore
+  loadGrammar() {
+    return Promise.resolve(typstTm);
   },
 });
+
+monaco.languages.register({ id: "typst", extensions: ["typ"] });
+monaco.languages.setLanguageConfiguration(
+  "typst",
+  typstConfig as unknown as monaco.languages.LanguageConfiguration
+);
+
+// Register Monarch languages
+monaco.languages.register({ id: "bibtex", extensions: ["bib"] });
+monaco.languages.setMonarchTokensProvider("bibtex", bibtex as IMonarchLanguage);
+
+// Register completion providers
+monaco.languages.registerCompletionItemProvider(
+  "typst",
+  new TypstCompletionProvider()
+);
+
+wireTextMateGrammars(registry, { typst: "source.typst" }).then(() => {});

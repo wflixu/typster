@@ -1,3 +1,5 @@
+import { invoke } from "@tauri-apps/api";
+
 export interface TypstRenderResponse {
   image: string;
   width: number;
@@ -32,4 +34,38 @@ export interface TypstSourceDiagnostic {
   hints: string[];
 }
 
+export enum TypstCompletionKind {
+  Syntax = 1,
+  Function = 2,
+  Parameter = 3,
+  Constant = 4,
+  Symbol = 5,
+  Type = 6,
+}
+
+export interface TypstCompletion {
+  kind: TypstCompletionKind;
+  label: string;
+  apply: string | null;
+  detail: string | null;
+}
+
 export type IMode = "all" | "edit" | "preview";
+
+export interface TypstCompleteResponse {
+  offset: number;
+  completions: TypstCompletion[];
+}
+
+export const autocomplete = (
+  path: string,
+  content: string,
+  offset: number,
+  explicit: boolean
+): Promise<TypstCompleteResponse> =>
+  invoke<TypstCompleteResponse>("typst_autocomplete", {
+    path,
+    content,
+    offset,
+    explicit,
+  });
