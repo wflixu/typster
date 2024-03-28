@@ -1,7 +1,7 @@
 <template>
     <a-modal v-model:open="open" title="Add Project" @ok="handleOk">
         <template #footer>
-            <a-button class="w-full" key="submit" type="primary" :loading="loading" @click="handleOk">Submit</a-button>
+            <a-button class="w-full" key="submit" type="primary" :loading="loading" @click="handleOk">添加项目</a-button>
         </template>
         <p>
             添加一个文件夹作为一个新项目
