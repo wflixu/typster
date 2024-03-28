@@ -6,12 +6,15 @@ import bibtex from "./lang/bibtex.json";
 import * as oniguruma from "vscode-oniguruma";
 import { wireTextMateGrammars } from "./lang/grammar";
 import typstTm from "./lang/typst-tm.json";
+import onigurumaWasm from "vscode-oniguruma/release/onig.wasm?url";
 
 import { TypstCompletionProvider } from "./lang/completion";
 import { Registry } from "vscode-textmate";
 
 type IMonarchLanguage = monaco.languages.IMonarchLanguage;
 
+const wasm = await fetch(onigurumaWasm).then((res) => res.arrayBuffer());
+await oniguruma.loadWASM(wasm);
 // @ts-ignore
 self.MonacoEnvironment = {
   getWorker(_: any, label: string) {

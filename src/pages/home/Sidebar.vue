@@ -1,14 +1,25 @@
 <template>
   <div class="sidebar">
-    <SidebarToggle v-if="systemStore.showSidebar" class="toggle"/>
+    <SidebarToggle v-if="systemStore.showSidebar" class="toggle" />
     <div class="title">
       <span>
         Files
       </span>
-      <a-button :icon="h(PlusOutlined)"></a-button>
+      <a-button :icon="h(PlusOutlined)" @click="onCreateFile"></a-button>
     </div>
-    <a-directory-tree class="dir" :blockNode="true" :height="300" v-model:expandedKeys="expandedKeys"
-      v-model:selectedKeys="selectedKeys" :tree-data="treeData" @select="onSelect"></a-directory-tree>
+    <a-directory-tree class="dir" :blockNode="true" v-model:expandedKeys="expandedKeys"
+      v-model:selectedKeys="selectedKeys" :tree-data="treeData" @select="onSelect">
+      <template #title="{ key: treeKey, title }">
+        <a-dropdown :trigger="['contextmenu']">
+          <span>{{ title }}</span>
+          <template #overlay >
+            <a-menu @click="({ key: menuKey }) => onContextMenuClick(treeKey, menuKey)">
+              <a-menu-item key="delete">删除</a-menu-item>
+            </a-menu>
+          </template>
+        </a-dropdown>
+      </template>
+    </a-directory-tree>
 
     <div class="footer">
       footer
@@ -20,10 +31,11 @@
 import type { TreeProps } from 'ant-design-vue';
 import { ref, h, reactive, onMounted } from 'vue';
 import { PlusOutlined } from '@ant-design/icons-vue'
-import { readDir, BaseDirectory, FileEntry } from '@tauri-apps/api/fs';
+import { readDir, BaseDirectory, FileEntry, writeTextFile, removeFile } from '@tauri-apps/api/fs';
 import { useSystemStoreHook } from '../../store/store';
 import { DataNode } from 'ant-design-vue/es/tree';
 import SidebarToggle from './SidebarToggle.vue';
+import { save } from '@tauri-apps/api/dialog';
 
 const systemStore = useSystemStoreHook();
 
@@ -33,6 +45,9 @@ const treeData: TreeProps['treeData'] = reactive([]);
 
 
 const initFiles = async () => {
+  if (treeData.length > 0) {
+    treeData.splice(0, treeData.length);
+  }
   console.log(systemStore.editingProject)
   const curProject = systemStore.editingProject
   if (!curProject) {
@@ -45,14 +60,14 @@ const initFiles = async () => {
     selectable: false,
     children: []
   }
-  
+
 
   // Reads the `$APPDATA/users` directory recursively
   const entries = await readDir(root.key, { recursive: true });
 
   function processEntries(entries: FileEntry[], parent: DataNode) {
     for (const entry of entries) {
-      if(entry.name?.endsWith('.DS_Store')) {
+      if (entry.name?.endsWith('.DS_Store')) {
         continue;
       }
       const node = { title: entry.path.split('/').pop(), key: entry.path, children: [], selectable: true };
@@ -72,15 +87,37 @@ const initFiles = async () => {
   }
 }
 
-
+const onContextMenuClick = async (treeKey: string, menuKey: string | number) => {
+  console.log(`treeKey: ${treeKey}, menuKey: ${menuKey}`);
+  if(menuKey == 'delete' && treeKey) {
+      await  removeFile(treeKey) ;
+      await initFiles();
+  }
+};
 
 const onSelect = (selectedKeys: string[]) => {
   console.log(selectedKeys)
   systemStore.setEditingFilePath(selectedKeys[0])
 }
+const onCreateFile = async () => {
+  const filePath = await save({
+    title: "新建文件",
+    filters: [{
+      name: 'untitled',
+      extensions: ['typ']
+    }],
+    defaultPath: systemStore.editingProject?.path
+
+  });
+  console.log(filePath)
+  if (filePath) {
+    await writeTextFile({ path: filePath, contents: ' ' });
+    await initFiles();
+  }
+}
 
 onMounted(() => {
-  initFiles().then(res => {
+  initFiles().then(() => {
     console.log(JSON.stringify(treeData))
   });
 })
@@ -97,11 +134,13 @@ onMounted(() => {
   box-sizing: border-box;
   border-right: 1px solid #ddd;
   position: relative;
+
   .toggle {
     position: absolute;
     right: 8px;
     top: 0;
   }
+
   .title {
     height: 60px;
     padding: 20px 16px 0 16px;
