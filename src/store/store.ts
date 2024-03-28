@@ -18,12 +18,6 @@ const useSystemStoreHook = defineStore("system", () => {
 
   const dirs = reactive([]);
 
-  const imgBedToken = ref<string>(
-    "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoibHgiLCJpZCI6MSwiaWF0IjoxNzA5ODg3MjUwLCJleHAiOjE3MTAwNjAwNTB9.oq5FJrAWN7HsNBqibFWY3ZPd0w6odM2W5j_Vr6UruwA"
-  );
-  const imgBedUrl = ref("http://127.0.0.1:8443/chunk/upload");
-  const imgBedShowBaseUrl = ref("http://127.0.0.1:8443/chunk/show");
-
   const projects = reactive<IProject[]>(
     JSON.parse(window.localStorage.getItem(PROJECTS_KEY) ?? "[]")
   );
@@ -57,7 +51,15 @@ const useSystemStoreHook = defineStore("system", () => {
     showSidebar.value = show ?? !showSidebar.value;
   };
 
+  const loading = ref(false);
+
+  const setLoading = (state: boolean) => {
+    loading.value = state;
+  };
+
   return {
+    loading,
+    setLoading,
     mode,
     setMode,
 
@@ -72,9 +74,6 @@ const useSystemStoreHook = defineStore("system", () => {
     editingFilePath,
     setEditingFilePath,
     dirs,
-    imgBedUrl,
-    imgBedShowBaseUrl,
-    imgBedToken,
   };
 });
 
