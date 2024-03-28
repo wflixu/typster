@@ -13,8 +13,12 @@ import { Registry } from "vscode-textmate";
 
 type IMonarchLanguage = monaco.languages.IMonarchLanguage;
 
-const wasm = await fetch(onigurumaWasm).then((res) => res.arrayBuffer());
-await oniguruma.loadWASM(wasm);
+fetch(onigurumaWasm)
+  .then((res) => res.arrayBuffer())
+  .then((wasm) => {
+    return oniguruma.loadWASM(wasm);
+  });
+
 // @ts-ignore
 self.MonacoEnvironment = {
   getWorker(_: any, label: string) {

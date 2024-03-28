@@ -1,0 +1,49 @@
+name: "build pkg"
+
+on:
+  push:
+    branches: 
+      - dev
+
+jobs:
+  publish-tauri:
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [ macos-latest, ubuntu-20.04, windows-latest ]
+
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: setup node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+      - name: install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+      - name: install dependencies (ubuntu only)
+        if: matrix.platform == 'ubuntu-20.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf
+      - name: install frontend dependencies
+        run: |
+          npm install -g pnpm
+          pnpm install --frozen-lockfile
+      - name: configure macOS build
+        if: matrix.platform == 'macos-latest'
+        run: |
+          # Ensure that we have the aarch64 toolchain available for cross-compilation
+          rustup target add aarch64-apple-darwin
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          args: ${{ matrix.platform == 'macos-latest' && '--target universal-apple-darwin' || '' }}
+          tagName: v__VERSION__-dev.${{ github.run_number }} # the action automatically replaces \_\_VERSION\_\_ with the app version
+          releaseName: "Development Build v__VERSION__-dev.${{ github.run_number }}"
+          releaseBody: "This is a development release from the master branch (Commit ${{ github.sha }})."
+          releaseDraft: false
+          prerelease: true

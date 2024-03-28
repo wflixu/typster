@@ -13,7 +13,7 @@
         <a-dropdown :trigger="['contextmenu']">
           <span>{{ title }}</span>
           <template #overlay>
-            <a-menu @click="({ key: menuKey }) => onContextMenuClick(treeKey, menuKey)">
+            <a-menu @click="({ key: menuKey }: any) => onContextMenuClick(treeKey, menuKey)">
               <a-menu-item key="delete">删除</a-menu-item>
             </a-menu>
           </template>
@@ -137,8 +137,8 @@ const onCreateFile = async () => {
   }
 }
 
-const onSelectProject = ({key}) =>{
-  console.log(key)
+const onSelectProject = ({key}:any) =>{
+
   let selectedProject = systemStore.projects.find(item => item.path == key)
   if(selectedProject) {
     systemStore.selectProject(selectedProject)

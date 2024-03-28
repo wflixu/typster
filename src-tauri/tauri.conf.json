@@ -19,28 +19,32 @@
       "all": true,
       "http": {
         "all": true,
-        "scope": ["http://127.0.0.1:8443/chunk/*"]
+        "scope": [
+          "http://127.0.0.1:8443/chunk/*"
+        ]
       },
       "dialog": {
-        "all": true, 
-        "ask": true, 
-        "confirm": true, 
+        "all": true,
+        "ask": true,
+        "confirm": true,
         "message": true,
         "open": true,
-        "save": true 
+        "save": true
       },
       "path": {
         "all": true
       },
       "fs": {
         "all": true,
-        "scope": ["$HOME/**/*"]
+        "scope": [
+          "$HOME/**/*"
+        ]
       },
       "shell": {
         "all": true,
         "open": true
       },
-      "clipboard":{
+      "clipboard": {
         "all": true,
         "readText": true,
         "writeText": true
@@ -61,7 +65,11 @@
         "icons/icon.ico"
       ],
       "identifier": "cn.wflixu.typster",
-      "targets": "all"
+      "targets": [
+        "dmg",
+        "msi",
+        "nsis"
+      ]
     },
     "security": {
       "csp": null
@@ -74,7 +82,6 @@
         "fullscreen": false,
         "resizable": true,
         "title": "typster",
-        
         "hiddenTitle": true,
         "titleBarStyle": "Overlay",
         "theme": "Light",
