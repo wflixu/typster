@@ -90,10 +90,8 @@
         "hiddenTitle": true,
         "titleBarStyle": "Overlay",
         "theme": "Light",
-        "x": 2000,
-        "y": 100,
         "width": 1200,
-        "height": 1200
+        "height": 900
       }
     ]
   }
