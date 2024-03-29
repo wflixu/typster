@@ -48,12 +48,11 @@
 import type { TreeProps } from 'ant-design-vue';
 import { ref, h, reactive, onMounted, computed } from 'vue';
 import { PlusOutlined, FolderOpenOutlined } from '@ant-design/icons-vue'
-import { readDir, BaseDirectory, FileEntry, writeTextFile, removeFile } from '@tauri-apps/api/fs';
+import { readDir, FileEntry, writeTextFile, removeFile } from '@tauri-apps/api/fs';
 import { useSystemStoreHook } from '../../store/store';
 import { DataNode } from 'ant-design-vue/es/tree';
 import SidebarToggle from './SidebarToggle.vue';
 import { save } from '@tauri-apps/api/dialog';
-import { router } from '../../router';
 
 const systemStore = useSystemStoreHook();
 
@@ -69,7 +68,7 @@ const initFiles = async () => {
   if (treeData.length > 0) {
     treeData.splice(0, treeData.length);
   }
-  console.log(systemStore.editingProject)
+  
   const curProject = systemStore.editingProject
   if (!curProject) {
     return
@@ -149,7 +148,7 @@ const onSelectProject = ({key}:any) =>{
 
 onMounted(() => {
   initFiles().then(() => {
-    console.log(JSON.stringify(treeData))
+    // console.log(JSON.stringify(treeData))
   });
 })
 

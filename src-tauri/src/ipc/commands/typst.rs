@@ -122,7 +122,7 @@ pub async fn typst_compile_doc<R: Runtime>(
         Err(diagnostics) => {
             debug!(
                 "compilation failed with {:?} diagnostics",
-                diagnostics.len()
+                &diagnostics
             );
 
             let source = world.source(source_id);

@@ -10,7 +10,7 @@
                     <h2>{{ project.title }}</h2>
                     <p> {{ project.path }}</p>
                     <div class="actions">
-                        <a-button @click="onDeleteProject(project)" size="small" shape="circle"
+                        <a-button @click.stop="onDeleteProject(project)" size="small" shape="circle"
                             :icon="h(DeleteOutlined)" />
                     </div>
                 </li>
@@ -26,7 +26,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, nextTick, h, computed } from 'vue';
+import { onMounted, ref, h, computed } from 'vue';
 import { DeleteOutlined } from '@ant-design/icons-vue'
 import type { IProject } from './interface';
 import { useSystemStoreHook } from '../../store/store';
@@ -37,8 +37,6 @@ import { invoke } from '@tauri-apps/api';
 const systemStore = useSystemStoreHook();
 const router = useRouter()
 const show = ref(false);
-
-const initLoading = ref(true);
 
 const list = computed(() => {
     return systemStore.projects;

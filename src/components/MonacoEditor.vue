@@ -27,7 +27,6 @@ const resizeObserver = new ResizeObserver((entries) => {
 
 
 onMounted(() => {
-  console.log(boxRef.value);
   if (!boxRef.value) {
     return;
   }
@@ -40,7 +39,6 @@ onMounted(() => {
     minimap: { enabled: false },
   });
   monacoEditor.onDidChangeModelContent((ev) => {
-    console.warn('-----onDidChangeModelContent',ev);
     
     model.value = monacoEditor?.getValue() ?? "";
   });

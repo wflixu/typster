@@ -90,7 +90,7 @@ impl Project {
         let path = fs::canonicalize(&path).unwrap_or(path);
         let config: ProjectConfig =
             ProjectConfig::read_from_file(path.join(PATH_PROJECT_CONFIG_FILE)).unwrap_or_default();
-        info!("----load_from_path: {:?}", config);
+        
         Self {
             world: ProjectWorld::new(path.clone()).into(),
             cache: RwLock::new(Default::default()),

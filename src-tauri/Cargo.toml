@@ -47,6 +47,13 @@ typst-ide = { git = "https://github.com/typst/typst", tag = "v0.11.0" }
 typst-pdf = { git = "https://github.com/typst/typst", tag = "v0.11.0" }
 typst-render = { git = "https://github.com/typst/typst", tag = "v0.11.0" }
 
+ureq = { version = "2", default-features = false, features = ["native-tls", "gzip", "json"] }
+ecow = { version = "0.2", features = ["serde"] }
+native-tls = "0.2"
+env_proxy = "0.4"
+flate2 = "1"
+tar = "0.4"
+
 
 [features]
 default = ["custom-protocol", "embed-fonts"]

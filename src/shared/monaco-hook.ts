@@ -1,6 +1,5 @@
 import * as monaco from "monaco-editor";
-import editorWorker from "monaco-editor/esm/vs/editor/editor.worker?worker";
-import jsonWorker from "monaco-editor/esm/vs/language/json/json.worker?worker";
+
 import typstConfig from "./lang/typst-config.json";
 import bibtex from "./lang/bibtex.json";
 import * as oniguruma from "vscode-oniguruma";
@@ -10,16 +9,11 @@ import onigurumaWasm from "vscode-oniguruma/release/onig.wasm?url";
 
 import { TypstCompletionProvider } from "./lang/completion";
 import { Registry } from "vscode-textmate";
+import editorWorker from "monaco-editor/esm/vs/editor/editor.worker?worker";
+import jsonWorker from "monaco-editor/esm/vs/language/json/json.worker?worker";
 
 type IMonarchLanguage = monaco.languages.IMonarchLanguage;
 
-fetch(onigurumaWasm)
-  .then((res) => res.arrayBuffer())
-  .then((wasm) => {
-    return oniguruma.loadWASM(wasm);
-  });
-
-// @ts-ignore
 self.MonacoEnvironment = {
   getWorker(_: any, label: string) {
     if (label === "json") {
@@ -29,29 +23,51 @@ self.MonacoEnvironment = {
   },
 };
 
-// Register TextMate grammars
-const registry = new Registry({
-  onigLib: Promise.resolve(oniguruma),
-  // @ts-ignore
-  loadGrammar() {
-    return Promise.resolve(typstTm);
-  },
-});
+const useInitMonaco = async () => {
+  await fetch(onigurumaWasm)
+    .then((res) => res.arrayBuffer())
+    .then((wasm) => {
+      return oniguruma.loadWASM(wasm);
+    });
 
-monaco.languages.register({ id: "typst", extensions: ["typ"] });
-monaco.languages.setLanguageConfiguration(
-  "typst",
-  typstConfig as unknown as monaco.languages.LanguageConfiguration
-);
+  // Register TextMate grammars
+  const registry = new Registry({
+    onigLib: Promise.resolve(oniguruma),
+    // @ts-ignore
+    loadGrammar() {
+      return Promise.resolve(typstTm);
+    },
+  });
 
-// Register Monarch languages
-monaco.languages.register({ id: "bibtex", extensions: ["bib"] });
-monaco.languages.setMonarchTokensProvider("bibtex", bibtex as IMonarchLanguage);
+  const grammars = new Map();
+  grammars.set("typst", "source.typst");
 
-// Register completion providers
-monaco.languages.registerCompletionItemProvider(
-  "typst",
-  new TypstCompletionProvider()
-);
+  monaco.languages.register({ id: "typst", extensions: ["typ"] });
+  monaco.languages.setLanguageConfiguration(
+    "typst",
+    typstConfig as unknown as monaco.languages.LanguageConfiguration
+  );
 
-wireTextMateGrammars(registry, { typst: "source.typst" }).then(() => {});
+  await wireTextMateGrammars(registry, { typst: "source.typst" }).then(
+    () => {}
+  );
+
+  // Register Monarch languages
+  monaco.languages.register({ id: "bibtex", extensions: ["bib"] });
+  monaco.languages.setMonarchTokensProvider(
+    "bibtex",
+    bibtex as IMonarchLanguage
+  );
+
+  // Register completion providers
+  monaco.languages.registerCompletionItemProvider(
+    "typst",
+    new TypstCompletionProvider()
+  );
+};
+
+useInitMonaco()
+  .then((res) => {
+    console.log(res);
+  })
+  .catch((err) => console.log(err));

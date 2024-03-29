@@ -1,6 +1,7 @@
 use crate::engine::TypstEngine;
 use chrono::Datelike;
 use comemo::Prehashed;
+use log::info;
 use std::cell::{OnceCell, RefCell, RefMut};
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
@@ -14,6 +15,8 @@ use typst::syntax::{FileId, Source, VirtualPath};
 use typst::text::{Font, FontBook};
 use typst::{Library, World};
 
+use super::download_package;
+ 
 pub struct ProjectWorld {
     root: PathBuf,
     engine: Arc<TypstEngine>,
@@ -143,6 +146,7 @@ impl ProjectWorld {
 
         if let Some(data_dir) = dirs::data_dir() {
             let dir = data_dir.join(&subdir);
+            info!("----package load_from_path: {:?}", &dir);
             if dir.exists() {
                 return Ok(dir);
             }
@@ -152,6 +156,13 @@ impl ProjectWorld {
             let dir = cache_dir.join(&subdir);
             if dir.exists() {
                 return Ok(dir);
+            }
+            // Download from network if it doesn't exist yet.
+            if spec.namespace == "preview" {
+                download_package(spec, &dir)?;
+                if dir.exists() {
+                    return Ok(dir);
+                }
             }
         }
 
@@ -203,6 +214,9 @@ impl World for ProjectWorld {
             dt.month().try_into().ok()?,
             dt.day().try_into().ok()?,
         )
+    }
+    fn packages(&self) -> &[(PackageSpec, Option<typst::diag::EcoString>)] {
+        &[]
     }
 }
 

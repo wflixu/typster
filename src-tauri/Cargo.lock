@@ -1428,6 +1428,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "env_proxy"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3a5019be18538406a43b5419a5501461f0c8b49ea7dfda0cfc32f4e51fc44be1"
+dependencies = [
+ "log",
+ "url",
+]
+
+[[package]]
 name = "equivalent"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5993,11 +6003,15 @@ dependencies = [
  "chrono",
  "comemo",
  "dirs",
+ "ecow",
  "enumset",
  "env_logger",
+ "env_proxy",
+ "flate2",
  "hex",
  "log",
  "memmap2",
+ "native-tls",
  "notify",
  "once_cell",
  "png",
@@ -6005,6 +6019,7 @@ dependencies = [
  "serde_json",
  "serde_repr",
  "siphasher 1.0.1",
+ "tar",
  "tauri",
  "tauri-build",
  "tauri-plugin-clipboard",
@@ -6014,6 +6029,7 @@ dependencies = [
  "typst-ide",
  "typst-pdf",
  "typst-render",
+ "ureq",
  "walkdir",
 ]
 
@@ -6121,6 +6137,22 @@ name = "unscanny"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e9df2af067a7953e9c3831320f35c1cc0600c30d44d9f7a12b01db1cd88d6b47"
+
+[[package]]
+name = "ureq"
+version = "2.9.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "11f214ce18d8b2cbe84ed3aa6486ed3f5b285cf8d8fbdbce9f3f767a724adc35"
+dependencies = [
+ "base64 0.21.7",
+ "flate2",
+ "log",
+ "native-tls",
+ "once_cell",
+ "serde",
+ "serde_json",
+ "url",
+]
 
 [[package]]
 name = "url"
