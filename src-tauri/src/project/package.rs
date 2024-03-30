@@ -1,22 +1,19 @@
 use ecow::eco_format;
 use log::info;
-use native_tls::{Certificate, TlsConnector};
+use native_tls::TlsConnector;
 use std::collections::VecDeque;
 use std::fs;
-use std::io::{self, ErrorKind, Read, Write};
-use std::path::{Path, PathBuf};
+use std::io::{self, ErrorKind, Read};
+use std::path::Path;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
-use typst::diag::{FileError, FileResult, PackageError, PackageResult};
+use typst::diag::{PackageError, PackageResult};
 use typst::syntax::package::PackageSpec;
 use ureq::Response;
-
 
 const HOST: &str = "https://packages.typst.org";
 /// Keep track of this many download speed samples.
 const SPEED_SAMPLES: usize = 5;
-
-
 
 /// Download from a URL.
 #[allow(clippy::result_large_err)]
@@ -34,8 +31,6 @@ pub fn download(url: &str) -> Result<ureq::Response, ureq::Error> {
     {
         builder = builder.proxy(proxy);
     }
-
-
 
     // Configure native TLS.
     let connector = tls

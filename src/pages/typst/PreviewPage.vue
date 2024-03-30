@@ -25,7 +25,7 @@ const renderPage = async () => {
     try {
         const res: TypstRenderResponse = await invoke<TypstRenderResponse>("typst_render", { page: props.num, scale: window.devicePixelRatio, nonce: nonce+1 });
         pageUrl.value = "data:image/png;base64," + res.image;
-        console.log(res)
+        
     } catch (error) {
         console.log(error)
     }
@@ -33,7 +33,6 @@ const renderPage = async () => {
 }
 
 let intersectionObserver = new IntersectionObserver((entries) => {
-    console.log('entries:', entries);
     for (const entry of entries) {
         if (entry.isIntersecting) {
             renderPage().catch(err => {
@@ -53,7 +52,6 @@ onMounted(() => {
     if (el.value) {
         intersectionObserver.observe(el.value);
     }
-    console.log(props)
     return () => {
         intersectionObserver.disconnect();
     }

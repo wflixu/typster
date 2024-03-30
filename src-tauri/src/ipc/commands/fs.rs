@@ -4,7 +4,6 @@ use crate::project::{Project, ProjectManager};
 use enumset::EnumSetType;
 use log::info;
 use serde::Serialize;
-use typst::foundations::Smart;
 use std::cmp::Ordering;
 use std::fs;
 use std::fs::{File, OpenOptions};
@@ -12,6 +11,7 @@ use std::io::Write;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tauri::{Runtime, State, Window};
+use typst::foundations::Smart;
 
 #[derive(Serialize, Debug)]
 pub struct FileItem {
@@ -36,10 +36,9 @@ pub async fn load_project_from_path<R: Runtime>(
     let path_buf = PathBuf::from(&path);
     let project = Arc::new(Project::load_from_path(path_buf));
     project_manager.set_project(&window, Some(project));
-    info!("succeeded load_project_from_path {}", &path);
+    info!("succeed load_project_from_path {}", &path);
     Ok(())
 }
-
 
 #[tauri::command]
 pub async fn export_pdf<R: Runtime>(
@@ -48,7 +47,7 @@ pub async fn export_pdf<R: Runtime>(
     path: String,
 ) -> Result<u64> {
     info!("start export pdf to path {}", &path);
-    let  path_buf = PathBuf::from(&path);
+    let path_buf = PathBuf::from(&path);
     if let Some(project) = project_manager.get_project(&window) {
         let cache = project.cache.read().unwrap();
         if let Some(doc) = &cache.document {
@@ -79,6 +78,9 @@ pub async fn fs_read_file_text<R: Runtime>(
     project_manager: State<'_, Arc<ProjectManager<R>>>,
     path: PathBuf,
 ) -> Result<String> {
+    if path.is_absolute() {
+        return fs::read_to_string(path).map_err(Into::into);
+    }
     let (_, path) = project_path(&window, &project_manager, path)?;
     fs::read_to_string(path).map_err(Into::into)
 }
@@ -127,12 +129,11 @@ pub async fn fs_write_file_text<R: Runtime>(
     let _ = File::create(absolute_path)
         .map(|mut f| f.write_all(content.as_bytes()))
         .map_err(Into::<Error>::into)?;
-
+     
     let mut world = project.world.lock().unwrap();
     let _ = world
         .slot_update(&path, Some(content))
         .map_err(Into::<Error>::into)?;
-
     Ok(())
 }
 

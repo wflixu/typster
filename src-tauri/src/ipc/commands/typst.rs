@@ -64,6 +64,21 @@ impl From<Completion> for TypstCompletion {
     }
 }
 
+#[tauri::command]
+pub async fn typst_slot_update<R: Runtime>(
+    window: tauri::Window<R>,
+    project_manager: tauri::State<'_, Arc<ProjectManager<R>>>,
+    path: PathBuf,
+    content: String,
+) -> Result<()> {
+    let project = project(&window, &project_manager)?;
+    
+    let mut world = project.world.lock().unwrap();
+    let _ = world
+        .slot_update(&path, Some(content))
+        .map_err(Into::<Error>::into)?;
+    Ok(())
+}
 
 #[tauri::command]
 pub async fn typst_compile_doc<R: Runtime>(

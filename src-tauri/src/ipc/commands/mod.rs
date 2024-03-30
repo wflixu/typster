@@ -10,7 +10,7 @@ use crate::project::{Project, ProjectManager};
 use ::typst::diag::FileError;
 use serde::{Serialize, Serializer};
 use std::io;
-use std::path::{Component, Path, PathBuf};
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tauri::{Runtime, State, Window};
 
@@ -59,21 +59,14 @@ pub fn project_path<R: Runtime, P: AsRef<Path>>(
     let project = project_manager
         .get_project(window)
         .ok_or(Error::UnknownProject)?;
+    let ref_path = path.as_ref();  
     let root_len = project.root.as_os_str().len();
-    let mut out = project.root.to_path_buf();
-    for component in path.as_ref().components() {
-        match component {
-            Component::Prefix(_) => {}
-            Component::RootDir => {}
-            Component::CurDir => {}
-            Component::ParentDir => {
-                out.pop();
-                if out.as_os_str().len() < root_len {
-                    return Err(Error::UnrelatedPath);
-                }
-            }
-            Component::Normal(_) => out.push(component),
-        }
-    }
+    let  out =  if ref_path.is_absolute() {
+           PathBuf::from(ref_path)
+    } else {
+        project.root.join(ref_path).to_path_buf()
+    }; 
+    
+
     Ok((project, out))
 }

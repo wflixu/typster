@@ -10,7 +10,7 @@
                         </a-tooltip>
                     </template>
                 </a-button>
-                <a-button size="small"  @click="exportPdf">
+                <a-button size="small" @click="exportPdf">
                     <template #icon>
                         <a-tooltip title="导出PDF">
                             <ExportOutlined />
@@ -49,8 +49,8 @@
             </div>
         </div>
         <div class="content">
-            <div class="source bbox" v-if="mode != 'preview'">
-                <MonacoEditor :mode="mode" v-model="source"></MonacoEditor>
+            <div class="source bbox" v-show="mode != 'preview'">
+                <MonacoEditor  :path="systemStore.editingFilePath" @change="onChange" @compiled="onCompile"></MonacoEditor>
             </div>
 
             <div class="result" v-show="mode != 'edit'">
@@ -94,7 +94,7 @@ const layoutcls = computed(() => {
 })
 
 const exportPdf = async () => {
-    console.log(systemStore.editingProject)
+   
 
     const filePath = await save({
         filters: [{
@@ -112,8 +112,8 @@ const readText = async () => {
         filePath = systemStore.editingProject?.path + 'main.typ'
     }
     const contents = await readTextFile(filePath);
-    systemStore.setEditingFilePath(filePath);
     source.value = contents;
+    systemStore.setEditingFilePath(filePath);
 }
 
 const onTest = async () => {
@@ -125,7 +125,7 @@ const onTest = async () => {
 const compile_typst_source = async () => {
     const mainpath = systemStore.editingProject?.path + '/main.typ';
     try {
-        const res = await invoke<TypstPage>("typst_compile_doc", { path: mainpath, content: source.value });
+        const res = await invoke<TypstPage[]>("typst_compile_doc", { path: mainpath, content: source.value });
         console.warn('compile_doc:', res);
         if (Array.isArray(res)) {
             pages.value = res;
@@ -133,7 +133,13 @@ const compile_typst_source = async () => {
     } catch (error) {
         pages.value = [];
     }
+}
 
+const onCompile = (data: TypstPage[]) => {
+    console.log('onCompile: data', data)
+    if (Array.isArray(data)) {
+        pages.value = data;
+    }
 }
 
 const saveSource = async () => {
@@ -158,15 +164,34 @@ const init = async () => {
 
 }
 
+const handleCompile = async () => {
+    // const editorModel = monacoEditor?.getModel();
+    // if (editorModel) {
+    //     model.value = editorModel?.getValue();
+    // }
+};
+const handleSave = async () => {
+    if (systemStore.editingFilePath ) {
+        console.warn('save file :' , source.value);
+        
+        await invoke("fs_write_file_text", { path: systemStore.editingFilePath.split('/').pop() , content: source.value })
+    }
+};
+
+
+
+const onChange = (text: string) => {
+
+  
+    // handleCompileThrottle()
+}
+
 onMounted(async () => {
 
     await init();
 
 })
 
-watch(() => source.value, (newVal) => {
-
-})
 
 watch(() => systemStore.editingFilePath, async () => {
     await readText();

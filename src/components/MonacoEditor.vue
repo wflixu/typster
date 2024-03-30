@@ -4,78 +4,138 @@
 
 <script setup lang="ts">
 import * as monaco from "monaco-editor/esm/vs/editor/editor.api";
-import { PropType, onMounted, onUnmounted, ref, watch } from "vue";
-import { IMode } from "../pages/typst/interface";
+import { PropType, computed, onMounted, ref, watch, watchEffect } from "vue";
+import { IMode, TypstPage, TypstRenderResponse } from "../pages/typst/interface";
+import type { editor as editorType } from "monaco-editor";
+import { invoke } from "@tauri-apps/api";
+import { throttle, debounce } from './../shared/util'
+import { useSystemStoreHook } from "../store/store";
+import { writeTextFile } from "@tauri-apps/api/fs";
 
-const model = defineModel({ type: String, default: '' })
+type IModelChangedEvent = editorType.IModelChangedEvent;
+type IModelContentChangedEvent = editorType.IModelContentChangedEvent;
+type ICodeEditor = editorType.ICodeEditor;
+
+
+
+// const model = defineModel({ type: String, default: '' })
 
 const props = defineProps({
-  mode: String as PropType<IMode>
+  path: String as PropType<string>
 })
+
+const emit = defineEmits<{
+  (e: 'change', text: string): void
+  (e: 'compiled', data: TypstPage[]): void
+}>()
+
+
 
 const boxRef = ref<HTMLElement>();
 let monacoEditor: monaco.editor.IStandaloneCodeEditor | null = null;
 
-const resizeObserver = new ResizeObserver((entries) => {
-  for (const entry of entries) {
-    const contentBoxSize = entry.contentBoxSize;
-    if (contentBoxSize && monacoEditor) {
-      monacoEditor.layout({ width: contentBoxSize[0].inlineSize!, height: contentBoxSize[0].blockSize });
+
+
+
+
+
+const updateContent = async (editor: ICodeEditor, path: string) => {
+
+  if (!editor) return;
+
+  // Prevent further updates and immediately flush pending updates
+  editor.updateOptions({ readOnly: true });
+
+  editor.getModel()?.dispose();
+
+  try {
+    console.log('read file path:', path);
+    const content = await invoke<string>('fs_read_file_text', { path });
+    const uri = monaco.Uri.file(path);
+    console.log('uri:', uri)
+    let editorModel = monaco.editor.getModel(uri);
+    if (editorModel) {
+      // Update existing model. This should only be possible in development mode
+      // after hot reload.
+      editorModel.setValue(content);
+    } else {
+      editorModel = monaco.editor.createModel(content, undefined, uri);
     }
+    editor.setModel(editorModel);
+  } catch (err) {
+    console.warn(err)
+  } finally {
+    editor.updateOptions({ readOnly: false });
   }
-});
+};
+
+const handleCompile = async () => {
+  const editorModel = monacoEditor?.getModel();
+  if (editorModel) {
+    const uri = editorModel.uri;
+    const content = editorModel.getValue()
+    await invoke('typst_slot_update', { path: props.path, content });
+    const pages = await invoke<TypstPage[]>('typst_compile_doc', { path: props.path, content })
+
+    emit('compiled', pages)
+  }
+};
+const handleSave = async () => {
+  const model = monacoEditor?.getModel();
+  if (model) {
+    // Removing the preceding slash
+    await invoke("fs_write_file_text", { path: props.path, content: model.getValue() });
+  }
+};
+
+
+//@ts-ignore
+const handleCompileThrottle = throttle(handleCompile);
+const handleSaveDebounce = debounce(handleSave, 200, { maxWait: 5000 });
 
 
 onMounted(() => {
   if (!boxRef.value) {
     return;
   }
+
+
   monacoEditor = monaco.editor.create(boxRef.value!, {
-    value: model.value,
     language: "typst",
     fontSize: 16,
     lineHeight: 28,
     scrollBeyondLastColumn: 2,
+    automaticLayout: true,
     minimap: { enabled: false },
   });
-  monacoEditor.onDidChangeModelContent((ev) => {
-    
-    model.value = monacoEditor?.getValue() ?? "";
+
+  monacoEditor.onDidChangeModel((evt: IModelChangedEvent) => {
+    handleCompileThrottle();
+  });
+  monacoEditor.onDidChangeModelContent((evt: IModelContentChangedEvent) => {
+    // Compile will update the source file directly in the memory without
+    // writing to the file system first, this will reduce the preview delay.
+    handleCompileThrottle();
+    handleSaveDebounce();
   });
 
-  resizeObserver.observe(boxRef.value!)
+  updateContent(monacoEditor, props.path!)
 
+  return () => {
+    if (monacoEditor) {
+      monacoEditor.dispose();
+    }
+  }
 });
 
-watch(() => props.mode, () => {
-  if (monacoEditor) {
-    monacoEditor.layout()
+
+watch(() => props.path, () => {
+  if (monacoEditor && props.path) {
+    updateContent(monacoEditor, props.path)
   }
 })
 
 
-
-watch(
-  () => model.value,
-  async (val, old) => {
-    if (monacoEditor) {
-      if (val != monacoEditor.getValue()) {
-        monacoEditor.setValue(val ?? "");
-        await monacoEditor
-          .getAction("monacoEditor.action.formatDocument")
-          ?.run();
-      }
-    }
-  }
-);
-
-onUnmounted(() => {
-  if (monacoEditor) {
-    monacoEditor.dispose();
-  }
-
-  resizeObserver.disconnect();
-});
 </script>
 
 <style scoped>

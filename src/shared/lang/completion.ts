@@ -20,7 +20,7 @@ export class TypstCompletionProvider
     context: languages.CompletionContext,
     token: CancellationToken
   ): Promise<languages.CompletionList> {
-    console.log("completing", position, context);
+    console.warn("completing", position, context);
     const { offset: completionOffset, completions } = await autocomplete(
       model.uri.path,
       model.getValue(),

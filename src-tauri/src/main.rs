@@ -45,6 +45,7 @@ async fn main() {
             ipc::commands::typst_compile_doc,
             ipc::commands::typst_render,
             ipc::commands::typst_autocomplete,
+            ipc::commands::typst_slot_update,
             ipc::commands::export_pdf,
             ipc::commands::clipboard_paste
         ])

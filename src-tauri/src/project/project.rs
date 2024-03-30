@@ -1,5 +1,5 @@
 use crate::project::ProjectWorld;
-use log::{debug,info};
+use log::debug;
 use serde::{Deserialize, Serialize};
 use std::fmt::{Debug, Formatter};
 use std::path::{Path, PathBuf};
@@ -90,7 +90,7 @@ impl Project {
         let path = fs::canonicalize(&path).unwrap_or(path);
         let config: ProjectConfig =
             ProjectConfig::read_from_file(path.join(PATH_PROJECT_CONFIG_FILE)).unwrap_or_default();
-        
+
         Self {
             world: ProjectWorld::new(path.clone()).into(),
             cache: RwLock::new(Default::default()),
