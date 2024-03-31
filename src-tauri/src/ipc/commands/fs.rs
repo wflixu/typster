@@ -129,7 +129,7 @@ pub async fn fs_write_file_text<R: Runtime>(
     let _ = File::create(absolute_path)
         .map(|mut f| f.write_all(content.as_bytes()))
         .map_err(Into::<Error>::into)?;
-     
+
     let mut world = project.world.lock().unwrap();
     let _ = world
         .slot_update(&path, Some(content))

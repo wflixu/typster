@@ -4,24 +4,21 @@
 
 <script setup lang="ts">
 import * as monaco from "monaco-editor/esm/vs/editor/editor.api";
-import { PropType, computed, onMounted, ref, watch, watchEffect } from "vue";
-import { IMode, TypstPage, TypstRenderResponse } from "../pages/typst/interface";
+import { PropType, onMounted, ref, watch } from "vue";
+import { TypstPage } from "../pages/typst/interface";
 import type { editor as editorType } from "monaco-editor";
 import { invoke } from "@tauri-apps/api";
-import { throttle, debounce } from './../shared/util'
-import { useSystemStoreHook } from "../store/store";
-import { writeTextFile } from "@tauri-apps/api/fs";
+import { throttle, debounce, relativePath } from './../shared/util'
+
 
 type IModelChangedEvent = editorType.IModelChangedEvent;
 type IModelContentChangedEvent = editorType.IModelContentChangedEvent;
 type ICodeEditor = editorType.ICodeEditor;
 
 
-
-// const model = defineModel({ type: String, default: '' })
-
 const props = defineProps({
-  path: String as PropType<string>
+  path: String as PropType<string>,
+  root: String as PropType<string>,
 })
 
 const emit = defineEmits<{
@@ -70,12 +67,14 @@ const updateContent = async (editor: ICodeEditor, path: string) => {
 };
 
 const handleCompile = async () => {
+
   const editorModel = monacoEditor?.getModel();
   if (editorModel) {
-    const uri = editorModel.uri;
+
     const content = editorModel.getValue()
-    await invoke('typst_slot_update', { path: props.path, content });
-    const pages = await invoke<TypstPage[]>('typst_compile_doc', { path: props.path, content })
+    const path = relativePath(props.root!, props.path!)
+
+    const pages = await invoke<TypstPage[]>('typst_compile_doc', { path, content })
 
     emit('compiled', pages)
   }
@@ -84,7 +83,8 @@ const handleSave = async () => {
   const model = monacoEditor?.getModel();
   if (model) {
     // Removing the preceding slash
-    await invoke("fs_write_file_text", { path: props.path, content: model.getValue() });
+    const path =  relativePath(props.root!, props.path!);
+    await invoke("fs_write_file_text", { path, content: model.getValue() });
   }
 };
 
@@ -117,6 +117,7 @@ onMounted(() => {
     // writing to the file system first, this will reduce the preview delay.
     handleCompileThrottle();
     handleSaveDebounce();
+    // handleCompile()
   });
 
   updateContent(monacoEditor, props.path!)

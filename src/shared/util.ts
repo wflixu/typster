@@ -216,3 +216,7 @@ export function isObject(value: unknown): value is Object {
   const type = typeof value;
   return value != null && (type === "object" || type === "function");
 }
+
+export function relativePath(root: string, cur: string) {
+  return cur.replace(root, "");
+}

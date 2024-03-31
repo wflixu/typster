@@ -3,13 +3,13 @@
         <div class="actions" :class="{ 'expand': systemStore.showSidebar }">
             <div class="left">
                 <SidebarToggle v-if="!systemStore.showSidebar" class="toggle" />
-                <a-button size="small" @click="saveSource">
+                <!-- <a-button size="small" >
                     <template #icon>
                         <a-tooltip title="保存">
                             <SaveOutlined />
                         </a-tooltip>
                     </template>
-                </a-button>
+</a-button> -->
                 <a-button size="small" @click="exportPdf">
                     <template #icon>
                         <a-tooltip title="导出PDF">
@@ -50,7 +50,8 @@
         </div>
         <div class="content">
             <div class="source bbox" v-show="mode != 'preview'">
-                <MonacoEditor  :path="systemStore.editingFilePath" @change="onChange" @compiled="onCompile"></MonacoEditor>
+                <MonacoEditor :path="systemStore.editingFilePath" :root="systemStore.editingProject?.path" @change="onChange" @compiled="onCompile">
+                </MonacoEditor>
             </div>
 
             <div class="result" v-show="mode != 'edit'">
@@ -62,26 +63,22 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, unref, watch, h, computed, nextTick } from 'vue';
-import { readTextFile, writeTextFile } from '@tauri-apps/api/fs';
+import { onMounted, ref,  computed } from 'vue';
+import { readTextFile } from '@tauri-apps/api/fs';
 import { invoke } from "@tauri-apps/api";
-import { EditOutlined, ReadOutlined, SaveOutlined, OneToOneOutlined, ExportOutlined } from '@ant-design/icons-vue'
+import { EditOutlined, ReadOutlined, OneToOneOutlined, ExportOutlined } from '@ant-design/icons-vue'
 import type { IAdjust, IMode, TypstPage } from './interface';
 import { useSystemStoreHook } from '../../store/store';
 import SidebarToggle from '../home/SidebarToggle.vue';
 import MonacoEditor from './../../components/MonacoEditor.vue'
 import PreviewPage from "./PreviewPage.vue"
 import { save } from '@tauri-apps/api/dialog';
-import { message } from 'ant-design-vue';
+
 
 const systemStore = useSystemStoreHook();
-const source = ref("")
-
 const mode = ref<IMode>(systemStore.mode);
-const adjust = ref<IAdjust>('full');
-
-
 const pages = ref<TypstPage[]>([])
+
 
 const layoutcls = computed(() => {
     if (mode.value == 'edit') {
@@ -94,8 +91,6 @@ const layoutcls = computed(() => {
 })
 
 const exportPdf = async () => {
-   
-
     const filePath = await save({
         filters: [{
             name: 'export_pdf',
@@ -103,30 +98,14 @@ const exportPdf = async () => {
         }]
     });
     const res = await invoke('export_pdf', { path: filePath })
-    console.log(res);
 }
 
-const readText = async () => {
-    let filePath = unref(systemStore.editingFilePath)
-    if (!filePath) {
-        filePath = systemStore.editingProject?.path + 'main.typ'
-    }
-    const contents = await readTextFile(filePath);
-    source.value = contents;
-    systemStore.setEditingFilePath(filePath);
-}
 
-const onTest = async () => {
-    const mainpath = systemStore.editingProject?.path + '/main.typ';
-    const res = await invoke<TypstPage[]>('typst_compile_doc', { path: mainpath, content: source.value })
-    console.warn(res)
-}
-
-const compile_typst_source = async () => {
+const compile_main_file = async () => {
     const mainpath = systemStore.editingProject?.path + '/main.typ';
     try {
-        const res = await invoke<TypstPage[]>("typst_compile_doc", { path: mainpath, content: source.value });
-        console.warn('compile_doc:', res);
+        const content = await readTextFile(mainpath);
+        const res = await invoke<TypstPage[]>("typst_compile_doc", { path: '/main.typ', content });
         if (Array.isArray(res)) {
             pages.value = res;
         }
@@ -142,61 +121,14 @@ const onCompile = (data: TypstPage[]) => {
     }
 }
 
-const saveSource = async () => {
-    try {
-        console.log(source.value)
-        await compile_typst_source();
-        await writeTextFile({ path: systemStore.editingFilePath, contents: source.value });
-        message.info("保存成功")
-    } catch (error) {
-        message.warn(`保存失败 : ${error}`);
-    }
-}
-
-
-const init = async () => {
-    try {
-        await readText();
-        await compile_typst_source();
-    } catch (error) {
-        console.log(error);
-    }
-
-}
-
-const handleCompile = async () => {
-    // const editorModel = monacoEditor?.getModel();
-    // if (editorModel) {
-    //     model.value = editorModel?.getValue();
-    // }
-};
-const handleSave = async () => {
-    if (systemStore.editingFilePath ) {
-        console.warn('save file :' , source.value);
-        
-        await invoke("fs_write_file_text", { path: systemStore.editingFilePath.split('/').pop() , content: source.value })
-    }
-};
-
-
 
 const onChange = (text: string) => {
 
-  
-    // handleCompileThrottle()
 }
 
 onMounted(async () => {
-
-    await init();
-
+    await compile_main_file();
 })
-
-
-watch(() => systemStore.editingFilePath, async () => {
-    await readText();
-})
-
 
 
 

@@ -39,7 +39,6 @@ impl ProjectWorld {
         let vpath = VirtualPath::new(path);
         let id = FileId::new(None, vpath.clone());
         let mut slot = self.slot(id)?;
-
         if let Some(res) = slot.buffer.get_mut() {
             // TODO: Avoid cloning?
             let bytes = self.take_or_read_bytes(&vpath, content.clone())?;

@@ -19,7 +19,7 @@ const SPEED_SAMPLES: usize = 5;
 #[allow(clippy::result_large_err)]
 pub fn download(url: &str) -> Result<ureq::Response, ureq::Error> {
     let mut builder = ureq::AgentBuilder::new();
-    let mut tls = TlsConnector::builder();
+    let tls = TlsConnector::builder();
 
     // Set user agent.
     builder = builder.user_agent(concat!("typst/", env!("CARGO_PKG_VERSION")));
