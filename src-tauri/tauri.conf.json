@@ -72,8 +72,7 @@
       },
       "targets": [
         "dmg",
-        "msi",
-        "nsis"
+        "msi"
       ]
     },
     "security": {

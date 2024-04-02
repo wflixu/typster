@@ -33,6 +33,7 @@
                 </a-radio-group>
             </div>
             <div class="right">
+                <ViewScale v-model="scale"/>
                 <!-- <template v-if="mode == 'preview'">
                     <a-radio-group v-model:value="adjust" button-style="solid" size="small">
                         <a-radio-button value="full">
@@ -50,12 +51,13 @@
         </div>
         <div class="content">
             <div class="source bbox" v-show="mode != 'preview'">
-                <MonacoEditor :path="systemStore.editingFilePath" :root="systemStore.editingProject?.path" @change="onChange" @compiled="onCompile">
+                <MonacoEditor :path="systemStore.editingFilePath" :root="systemStore.editingProject?.path"
+                    @change="onChange" @compiled="onCompile">
                 </MonacoEditor>
             </div>
 
-            <div class="result" v-show="mode != 'edit'">
-                <PreviewPage v-for="page in pages" :key="page.hash" v-bind="page" />
+            <div class="result" v-show="mode != 'edit'" @wheel="onWhell">
+                <PreviewPage v-for="page in pages" :key="page.hash" v-bind="page" :scale="scale" />
             </div>
         </div>
 
@@ -63,7 +65,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref,  computed } from 'vue';
+import { onMounted, ref, computed } from 'vue';
 import { readTextFile } from '@tauri-apps/api/fs';
 import { invoke } from "@tauri-apps/api";
 import { EditOutlined, ReadOutlined, OneToOneOutlined, ExportOutlined } from '@ant-design/icons-vue'
@@ -73,12 +75,12 @@ import SidebarToggle from '../home/SidebarToggle.vue';
 import MonacoEditor from './../../components/MonacoEditor.vue'
 import PreviewPage from "./PreviewPage.vue"
 import { save } from '@tauri-apps/api/dialog';
-
+import ViewScale from './ViewScale.vue'
 
 const systemStore = useSystemStoreHook();
 const mode = ref<IMode>(systemStore.mode);
 const pages = ref<TypstPage[]>([])
-
+const scale = ref(1);
 
 const layoutcls = computed(() => {
     if (mode.value == 'edit') {
@@ -123,6 +125,20 @@ const onCompile = (data: TypstPage[]) => {
 
 
 const onChange = (text: string) => {
+
+}
+
+const onWhell = (evt: WheelEvent) => {
+    if (evt.ctrlKey) {
+        evt.stopPropagation();
+        evt.preventDefault();
+        console.log(evt)
+        const deltaY = evt.deltaY;
+        scale.value += deltaY / 100; // 示例：每次滚动增加或减少一定的比例
+
+        // 限制缩放比例范围
+        scale.value = Math.min(2, Math.max(0.5, scale.value));
+    }
 
 }
 
@@ -177,8 +193,9 @@ onMounted(async () => {
             flex: 1;
             background-color: #f1f1f1;
             display: flex;
-            flex-direction: column;
+            flex-wrap: wrap;
             align-items: center;
+            justify-content: center;
             overflow: auto;
             height: 100%;
         }
