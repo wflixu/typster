@@ -2,8 +2,8 @@ name: "build pkg"
 
 on:
   push:
-    branches: 
-      - release
+    branches:
+      - ['tags']
 
 jobs:
   publish-tauri:
