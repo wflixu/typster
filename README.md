@@ -36,3 +36,13 @@ Typster is built using [Tauri](https://tauri.app/).
 ```
 pnpm tauri icon
 ```
+
+
+## Other similar projects:
+
+- https://github.com/Cubxity/typstudio
+- https://github.com/Enter-tainer/typst-preview
+
+## Related projects
+- https://github.com/Enter-tainer/typstyle
+- https://github.com/nvarner/typst-lsp

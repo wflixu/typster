@@ -124,12 +124,12 @@ const onCreateFile = async () => {
     title: "新建文件",
     filters: [{
       name: 'untitled',
-      extensions: ['typ']
+      extensions: ['typ', 'bib', 'yml']
     }],
     defaultPath: systemStore.editingProject?.path
 
   });
-  console.log(filePath)
+  console.warn(filePath)
   if (filePath) {
     await writeTextFile({ path: filePath, contents: ' ' });
     await initFiles();
