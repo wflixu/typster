@@ -91,14 +91,21 @@ onMounted(() => {
     }
 
     .list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 40px;
+        
         .list-item {
+            flex-shrink: 0;
             cursor: pointer;
             border: 1px solid #ddd;
             border-radius: 4px;
             position: relative;
             padding: 16px;
             margin-top: 40px;
-
+            /* max-width: 420px; */
+            min-width: max(240px, 20vw);
+            flex: 1;
             .actions {
                 position: absolute;
                 right: 16px;
