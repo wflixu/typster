@@ -1,6 +1,8 @@
 <template>
     <div class="typster" :class="layoutcls">
-        <div class="actions" :class="{ 'expand': systemStore.showSidebar }">
+        <div class="actions" :class="{ 'expand': systemStore.showSidebar }" @dblclick="toggleWindowMax"
+            @mousedown="mousedownHandler" @mouseup="mouseupHandler" @mousemove="mousemoveHandler"
+            @mouseleave="mouseleaveHandler">
             <div class="left">
                 <SidebarToggle v-if="!systemStore.showSidebar" class="toggle" />
                 <!-- <a-button size="small" >
@@ -33,7 +35,7 @@
                 </a-radio-group>
             </div>
             <div class="right">
-                <ViewScale v-model="scale"/>
+                <ViewScale v-model="scale" />
                 <!-- <template v-if="mode == 'preview'">
                     <a-radio-group v-model:value="adjust" button-style="solid" size="small">
                         <a-radio-button value="full">
@@ -76,6 +78,16 @@ import MonacoEditor from './../../components/MonacoEditor.vue'
 import PreviewPage from "./PreviewPage.vue"
 import { save } from '@tauri-apps/api/dialog';
 import ViewScale from './ViewScale.vue'
+import { useWinMove } from "./../../shared/move-hook"
+import { useToggleWindowMax } from './../../shared/window-max'
+
+const { mousedownHandler,
+    mouseupHandler,
+    mousemoveHandler,
+    mouseleaveHandler } = useWinMove()
+
+const { toggleWindowMax } = useToggleWindowMax()
+
 
 const systemStore = useSystemStoreHook();
 const mode = ref<IMode>(systemStore.mode);
@@ -101,6 +113,8 @@ const exportPdf = async () => {
     });
     const res = await invoke('export_pdf', { path: filePath })
 }
+
+
 
 
 const compile_main_file = async () => {
