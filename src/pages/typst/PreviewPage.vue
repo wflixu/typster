@@ -9,7 +9,7 @@ import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { invoke } from '@tauri-apps/api';
 import defaultUrl from './../../assets/rendering.svg'
 
-import type { TypstCompileEvent, TypstRenderResponse } from './interface';
+import type { TypstRenderResponse } from './interface';
 
 const props = defineProps({
     num: Number,

@@ -86,11 +86,14 @@
         "fullscreen": false,
         "resizable": true,
         "title": "typster",
+        "center": true,
         "hiddenTitle": true,
-        "titleBarStyle": "Overlay",
+        "titleBarStyle": "Transparent",
         "theme": "Light",
         "width": 1200,
-        "height": 900
+        "height": 900,
+        "minWidth": 800,
+        "minHeight": 400
       }
     ]
   }

@@ -1,7 +1,7 @@
 import { createApp } from "vue";
-import "./style/styles.css";
 import "github-markdown-css";
 import "ant-design-vue/dist/reset.css";
+import "./style/styles.css";
 import "./shared/monaco-hook";
 
 import Antd from "ant-design-vue";

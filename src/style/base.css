@@ -1,4 +1,9 @@
 /* css reset */
+:root {
+  --text-color: #666;
+}
+
+
 ul {
   list-style: none;
   padding-left:0;

@@ -25,6 +25,8 @@ export interface TypstPage {
   num: number;
 }
 
+export type TypstCompileResult = [[TypstPage], [TypstSourceDiagnostic]]
+
 export type TypstDiagnosticSeverity = "error" | "warning";
 
 export interface TypstSourceDiagnostic {
@@ -32,6 +34,7 @@ export interface TypstSourceDiagnostic {
   severity: TypstDiagnosticSeverity;
   message: string;
   hints: string[];
+  pos: [number, number]
 }
 
 export enum TypstCompletionKind {

@@ -2,7 +2,7 @@ use super::{Error, Result};
 use crate::ipc::commands::project;
 use crate::ipc::model::TypstRenderResponse;
 use crate::ipc::{
-    TypstCompileEvent, TypstDiagnosticSeverity, TypstDocument, TypstPage, TypstSourceDiagnostic
+    TypstCompileEvent, TypstDiagnosticSeverity, TypstDocument, TypstPage, TypstSourceDiagnostic,
 };
 use crate::project::ProjectManager;
 use base64::Engine;
@@ -11,6 +11,7 @@ use serde::Serialize;
 use serde_repr::Serialize_repr;
 use siphasher::sip128::{Hasher128, SipHasher};
 use std::hash::Hash;
+use std::ops::Range;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Instant;
@@ -72,7 +73,7 @@ pub async fn typst_slot_update<R: Runtime>(
     content: String,
 ) -> Result<()> {
     let project = project(&window, &project_manager)?;
-    
+
     let mut world = project.world.lock().unwrap();
     let _ = world
         .slot_update(&path, Some(content))
@@ -86,7 +87,7 @@ pub async fn typst_compile_doc<R: Runtime>(
     project_manager: tauri::State<'_, Arc<ProjectManager<R>>>,
     path: PathBuf,
     content: String,
-) -> Result<Vec<TypstPage>> {
+) -> Result<(Vec<TypstPage>, Vec<TypstSourceDiagnostic>)> {
     let project = project(&window, &project_manager)?;
 
     let mut world = project.world.lock().unwrap();
@@ -105,7 +106,8 @@ pub async fn typst_compile_doc<R: Runtime>(
     debug!("compiling {:?}: {:?}", path, project);
     let now = Instant::now();
     let mut tracer = Tracer::new();
-    let mut res: Vec<TypstPage> = Vec::new();
+    let mut pages: Vec<TypstPage> = Vec::new();
+    let mut diags: Vec<TypstSourceDiagnostic> = Vec::new();
     match typst::compile(&*world, &mut tracer) {
         Ok(doc) => {
             let elapsed = now.elapsed();
@@ -114,31 +116,27 @@ pub async fn typst_compile_doc<R: Runtime>(
                 project,
                 elapsed.as_millis()
             );
-            let mut idx:u32 = 0;
+            let mut idx: u32 = 0;
             for page in &doc.pages {
                 let mut hasher = SipHasher::new();
                 page.frame.hash(&mut hasher);
                 let hash = hex::encode(hasher.finish128().as_bytes());
-                let width  = page.frame.width().to_pt();
+                let width = page.frame.width().to_pt();
                 let height = page.frame.height().to_pt();
-                idx +=1;
-                let  pag =  TypstPage {
+                idx += 1;
+                let pag = TypstPage {
                     num: idx,
                     width,
                     height,
-                    hash: hash.clone()
+                    hash: hash.clone(),
                 };
-                res.push(pag);
+                pages.push(pag);
             }
 
             project.cache.write().unwrap().document = Some(doc);
-
         }
         Err(diagnostics) => {
-            debug!(
-                "compilation failed with {:?} diagnostics",
-                &diagnostics
-            );
+            debug!("compilation failed with {:?} diagnostics", &diagnostics);
 
             let source = world.source(source_id);
             let diagnostics: Vec<TypstSourceDiagnostic> = match source {
@@ -148,13 +146,11 @@ pub async fn typst_compile_doc<R: Runtime>(
                     .filter_map(|d| {
                         let span = source.find(d.span)?;
                         let range = span.range();
-                        let start = content[..range.start].chars().count();
-                        let size = content[range.start..range.end].chars().count();
 
                         let message = d.message.to_string();
-                        info!("############## {}", &message);
                         Some(TypstSourceDiagnostic {
-                            range: start..start + size,
+                            pos: get_range_position(&content, range.clone()),
+                            range,
                             severity: match d.severity {
                                 Severity::Error => TypstDiagnosticSeverity::Error,
                                 Severity::Warning => TypstDiagnosticSeverity::Warning,
@@ -167,123 +163,32 @@ pub async fn typst_compile_doc<R: Runtime>(
                 Err(_) => vec![],
             };
 
-            info!("############## {:?}", &diagnostics);
+            diags = diagnostics.clone();
 
-
-
-           
+            info!("############## {:?}", &diags);
         }
     }
 
-    Ok(res)
+    Ok((pages, diags))
 }
 
-#[tauri::command]
-pub async fn typst_compile<R: Runtime>(
-    window: tauri::Window<R>,
-    project_manager: tauri::State<'_, Arc<ProjectManager<R>>>,
-    path: PathBuf,
-    content: String,
-) -> Result<()> {
-    let project = project(&window, &project_manager)?;
+pub fn get_range_position(text: &str, rang: Range<usize>) -> (usize, usize) {
+    let mut ln = 0;
+    let mut cn = 0;
+    let mut total: usize = 0;
+    for line in text.lines() {
+       
+        ln += 1;
+        let row = line.chars().count() + 1;
 
-    let mut world = project.world.lock().unwrap();
-    let source_id = world
-        .slot_update(&path, Some(content.clone()))
-        .map_err(Into::<Error>::into)?;
-
-    if !world.is_main_set() {
-        let config = project.config.read().unwrap();
-        if config.apply_main(&project, &mut world).is_err() {
-            debug!("skipped compilation for {:?} (main not set)", project);
-            return Ok(());
+        if total <= rang.start && rang.start <= total + row {
+            cn = rang.start - total;
+            break;
         }
+
+        total += row;        
     }
-
-    debug!("compiling {:?}: {:?}", path, project);
-    let now = Instant::now();
-    let mut tracer = Tracer::new();
-    match typst::compile(&*world, &mut tracer) {
-        Ok(doc) => {
-            let elapsed = now.elapsed();
-            debug!(
-                "compilation succeeded for {:?} in {:?} ms",
-                project,
-                elapsed.as_millis()
-            );
-
-            let pages = doc.pages.len();
-
-            let mut hasher = SipHasher::new();
-            for page in &doc.pages {
-                page.frame.hash(&mut hasher);
-            }
-            let hash = hex::encode(hasher.finish128().as_bytes());
-
-            // Assume all pages have the same size
-            // TODO: Improve this?
-            let first_page = &doc.pages[0];
-            let width = first_page.frame.width();
-            let height = first_page.frame.height();
-
-            project.cache.write().unwrap().document = Some(doc);
-
-            let _ = window.emit(
-                "typst_compile",
-                TypstCompileEvent {
-                    document: Some(TypstDocument {
-                        pages,
-                        hash,
-                        width: width.to_pt(),
-                        height: height.to_pt(),
-                    }),
-                    diagnostics: None,
-                },
-            );
-        }
-        Err(diagnostics) => {
-            debug!(
-                "compilation failed with {:?} diagnostics",
-                diagnostics.len()
-            );
-
-            let source = world.source(source_id);
-            let diagnostics: Vec<TypstSourceDiagnostic> = match source {
-                Ok(source) => diagnostics
-                    .iter()
-                    .filter(|d| d.span.id() == Some(source_id))
-                    .filter_map(|d| {
-                        let span = source.find(d.span)?;
-                        let range = span.range();
-                        let start = content[..range.start].chars().count();
-                        let size = content[range.start..range.end].chars().count();
-
-                        let message = d.message.to_string();
-                        Some(TypstSourceDiagnostic {
-                            range: start..start + size,
-                            severity: match d.severity {
-                                Severity::Error => TypstDiagnosticSeverity::Error,
-                                Severity::Warning => TypstDiagnosticSeverity::Warning,
-                            },
-                            message,
-                            hints: d.hints.iter().map(|hint| hint.to_string()).collect(),
-                        })
-                    })
-                    .collect(),
-                Err(_) => vec![],
-            };
-
-            let _ = window.emit(
-                "typst_compile",
-                TypstCompileEvent {
-                    document: None,
-                    diagnostics: Some(diagnostics),
-                },
-            );
-        }
-    }
-
-    Ok(())
+    return (ln, cn);
 }
 
 #[tauri::command]
@@ -294,17 +199,23 @@ pub async fn typst_render<R: Runtime>(
     scale: f32,
     nonce: u32,
 ) -> Result<TypstRenderResponse> {
-    
-    info!("typst_render page:{} scale: {} nonce: {}", page, scale, nonce);
+    info!(
+        "typst_render page:{} scale: {} nonce: {}",
+        page, scale, nonce
+    );
     let project = project_manager
         .get_project(&window)
         .ok_or(Error::UnknownProject)?;
-    
+
     let cache = project.cache.read().unwrap();
-    
-    if let Some(p) = cache.document.as_ref().and_then(|doc| doc.pages.get(page-1)) {
+
+    if let Some(p) = cache
+        .document
+        .as_ref()
+        .and_then(|doc| doc.pages.get(page - 1))
+    {
         let now = Instant::now();
-        
+
         let bmp = typst_render::render(&p.frame, scale, Color::WHITE);
         if let Ok(image) = bmp.encode_png() {
             let elapsed = now.elapsed();

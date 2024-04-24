@@ -1,4 +1,4 @@
-![typster](./public/imgs/app-icon.png)
+![typster](./app-icon.png)
 
 # [WIP] typster 
 

@@ -6,6 +6,9 @@ export function useWinMove() {
   const lastPos = ref<number[]>([]);
 
   const move = async (evt: MouseEvent) => {
+    if (evt.target != evt.currentTarget) {
+      return
+    }
     const { screenX, screenY, pageX, pageY } = evt;
     const [sX, sY] = lastPos.value;
     const ph = new LogicalPosition(
@@ -17,6 +20,9 @@ export function useWinMove() {
   };
 
   const mousedownHandler = async (evt: MouseEvent) => {
+    if (evt.target != evt.currentTarget) {
+      return
+    }
     const { screenX, screenY } = evt;
     moving.value = true;
     lastPos.value = [screenX, screenY];
@@ -24,12 +30,18 @@ export function useWinMove() {
   };
 
   const mouseupHandler = async (evt: MouseEvent) => {
+    if (evt.target != evt.currentTarget) {
+      return
+    }
     console.log(" mouseup");
     moving.value = false;
     await move(evt);
   };
 
   const mousemoveHandler = async (evt: MouseEvent) => {
+    if (evt.target != evt.currentTarget) {
+      return
+    }
     if (moving.value) {
       console.log("mousemove");
       await move(evt);
@@ -37,6 +49,9 @@ export function useWinMove() {
   };
 
   const mouseleaveHandler = async (evt: MouseEvent) => {
+    if (evt.target != evt.currentTarget) {
+      return
+    }
     if (moving.value) {
       moving.value = false;
       await move(evt);
