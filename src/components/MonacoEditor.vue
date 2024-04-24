@@ -5,7 +5,7 @@
 <script setup lang="ts">
 import * as monaco from "monaco-editor/esm/vs/editor/editor.api";
 import { PropType, onMounted, ref, watch } from "vue";
-import { TypstPage } from "../pages/typst/interface";
+import { TypstCompileResult, TypstPage } from "../pages/typst/interface";
 import type { editor as editorType } from "monaco-editor";
 import { invoke } from "@tauri-apps/api";
 import { throttle, debounce, relativePath } from './../shared/util'
@@ -23,7 +23,7 @@ const props = defineProps({
 
 const emit = defineEmits<{
   (e: 'change', text: string): void
-  (e: 'compiled', data: TypstPage[]): void
+  (e: 'compiled', data: TypstCompileResult): void
 }>()
 
 
@@ -74,7 +74,7 @@ const handleCompile = async () => {
     const content = editorModel.getValue()
     const path = relativePath(props.root!, props.path!)
 
-    const pages = await invoke<TypstPage[]>('typst_compile_doc', { path, content })
+    const pages = await invoke<TypstCompileResult>('typst_compile_doc', { path, content })
 
     emit('compiled', pages)
   }

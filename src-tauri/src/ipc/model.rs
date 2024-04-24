@@ -39,6 +39,7 @@ pub struct TypstSourceDiagnostic {
     pub severity: TypstDiagnosticSeverity,
     pub message: String,
     pub hints: Vec<String>,
+    pub pos:(usize, usize)
 }
 
 #[derive(Serialize, Clone, Debug)]

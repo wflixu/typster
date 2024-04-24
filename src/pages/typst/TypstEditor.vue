@@ -59,6 +59,7 @@
             </div>
 
             <div class="result" v-show="mode != 'edit'" @wheel="onWhell">
+                <DiagnosticsTip :diagnostic="diagnostic" />
                 <PreviewPage v-for="page in pages" :key="page.hash" v-bind="page" :scale="scale" />
             </div>
         </div>
@@ -71,28 +72,43 @@ import { onMounted, ref, computed } from 'vue';
 import { readTextFile } from '@tauri-apps/api/fs';
 import { invoke } from "@tauri-apps/api";
 import { EditOutlined, ReadOutlined, OneToOneOutlined, ExportOutlined } from '@ant-design/icons-vue'
-import type { IAdjust, IMode, TypstPage } from './interface';
+import type { IAdjust, IMode, TypstCompileResult, TypstPage, TypstSourceDiagnostic } from './interface';
 import { useSystemStoreHook } from '../../store/store';
 import SidebarToggle from '../home/SidebarToggle.vue';
 import MonacoEditor from './../../components/MonacoEditor.vue'
 import PreviewPage from "./PreviewPage.vue"
+import DiagnosticsTip from './DiagnosticsTip.vue'
+
 import { save } from '@tauri-apps/api/dialog';
 import ViewScale from './ViewScale.vue'
 import { useWinMove } from "./../../shared/move-hook"
-import { useToggleWindowMax } from './../../shared/window-max'
+
+import { appWindow } from '@tauri-apps/api/window';
 
 const { mousedownHandler,
     mouseupHandler,
     mousemoveHandler,
     mouseleaveHandler } = useWinMove()
 
-const { toggleWindowMax } = useToggleWindowMax()
 
+const toggleWindowMax = async (event: MouseEvent) => {
 
+    if (event.target != event.currentTarget) {
+        return
+    }
+    await appWindow.toggleMaximize()
+
+}
 const systemStore = useSystemStoreHook();
 const mode = ref<IMode>(systemStore.mode);
 const pages = ref<TypstPage[]>([])
+const diags = ref<TypstSourceDiagnostic[]>([])
 const scale = ref(1);
+
+const diagnostic = computed<TypstSourceDiagnostic|null>(()=>{
+    
+    return diags.value.shift() ?? null;
+})
 
 const layoutcls = computed(() => {
     if (mode.value == 'edit') {
@@ -121,20 +137,22 @@ const compile_main_file = async () => {
     const mainpath = systemStore.editingProject?.path + '/main.typ';
     try {
         const content = await readTextFile(mainpath);
-        const res = await invoke<TypstPage[]>("typst_compile_doc", { path: '/main.typ', content });
+        const [res, diags] = await invoke<TypstCompileResult>("typst_compile_doc", { path: '/main.typ', content });
+        console.warn(res,diags)
         if (Array.isArray(res)) {
             pages.value = res;
         }
     } catch (error) {
+        console.warn(error)
         pages.value = [];
     }
 }
 
-const onCompile = (data: TypstPage[]) => {
+const onCompile = (data: TypstCompileResult) => {
     console.log('onCompile: data', data)
-    if (Array.isArray(data)) {
-        pages.value = data;
-    }
+    const [rpages, rdiags] = data;
+    pages.value = rpages;
+    diags.value = rdiags
 }
 
 
@@ -143,6 +161,7 @@ const onChange = (text: string) => {
 }
 
 const onWhell = (evt: WheelEvent) => {
+
     if (evt.ctrlKey) {
         evt.stopPropagation();
         evt.preventDefault();
@@ -212,6 +231,11 @@ onMounted(async () => {
             justify-content: center;
             overflow: auto;
             height: 100%;
+            position: relative;
+        }
+
+        .result.error {
+            overflow: hidden;
         }
     }
 }
