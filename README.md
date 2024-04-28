@@ -6,7 +6,12 @@ A W.I.P desktop application for a new markup-based typesetting language, [typst]
 Typster is built using [Tauri](https://tauri.app/).
 
 
-# screenshot
+# features
+- [ ]
+- [ ] 
+
+
+## screenshot
 
 
 ![typster](./public/imgs/screen_projects.png)
@@ -29,7 +34,7 @@ Typster is built using [Tauri](https://tauri.app/).
 
 
 ```
- xattr -c /Applications/appname.app
+ xattr -c /Applications/typster.app
 ```
 ### rebuild app icon
 
