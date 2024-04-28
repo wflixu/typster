@@ -66,7 +66,8 @@ const handleOk = () => {
         emit('finish')
         resetProject()
     } else {
-        message.warn("请填写完整")
+        message.warn("请填写完整");
+        loading.value = false;
     }
 };
 
