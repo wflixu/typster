@@ -2,7 +2,7 @@ name: "build pkg"
 
 on:
   push:
-    -branches:
+    - branches:
       - release
 
 jobs:
@@ -37,8 +37,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           args: ${{ matrix.platform == 'macos-latest' && '--target universal-apple-darwin' || '' }}
-          tagName: v__VERSION__-dev.${{ github.run_number }} # the action automatically replaces \_\_VERSION\_\_ with the app version
-          releaseName: "Development Build v__VERSION__-dev.${{ github.run_number }}"
+          tagName: v__VERSION__.${{ github.run_number }} # the action automatically replaces \_\_VERSION\_\_ with the app version
+          releaseName: "Development Build v__VERSION__.${{ github.run_number }}"
           releaseBody: "This is a development release from the master branch (Commit ${{ github.sha }})."
           releaseDraft: false
           prerelease: true
