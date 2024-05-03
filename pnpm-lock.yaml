@@ -14,9 +14,6 @@ dependencies:
   ant-design-vue:
     specifier: 4.x
     version: 4.1.2(vue@3.4.21)
-  github-markdown-css:
-    specifier: ^5.5.1
-    version: 5.5.1
   monaco-editor:
     specifier: ^0.46.0
     version: 0.46.0
@@ -840,11 +837,6 @@ packages:
     requiresBuild: true
     dev: true
     optional: true
-
-  /github-markdown-css@5.5.1:
-    resolution: {integrity: sha512-2osyhNgFt7DEHnGHbgIifWawAqlc68gjJiGwO1xNw/S48jivj8kVaocsVkyJqUi3fm7fdYIDi4C6yOtcqR/aEQ==}
-    engines: {node: '>=10'}
-    dev: false
 
   /he@1.2.0:
     resolution: {integrity: sha512-F/1DnUGPopORZi0ni+CvrCgHQ5FyEAHRLSApuYWMmrbSwoN2Mn/7k+Gl38gJnR7yyDZk6WLXwiGod1JOWNDKGw==}
