@@ -35,7 +35,6 @@
             <a-menu-item v-for="pro in projects" :key="pro.path">
               <span>{{ pro.title }}</span> : <span>{{ pro.path }}</span>
             </a-menu-item>
-            
           </a-menu>
         </template>
       </a-dropdown>
@@ -141,7 +140,6 @@ const onSelectProject = ({key}:any) =>{
   let selectedProject = systemStore.projects.find(item => item.path == key)
   if(selectedProject) {
     systemStore.selectProject(selectedProject)
-    systemStore.setEditingFilePath(selectedProject.path + '/main.typ');
     window.location.reload();
   }
 }

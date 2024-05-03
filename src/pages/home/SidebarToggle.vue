@@ -21,7 +21,9 @@ const systemStore = useSystemStoreHook();
 
 const router = useRouter();
 const back = () => {
+    systemStore.selectProject(null);
     router.push('/project')
+
 }
 
 const onToggle = () => {

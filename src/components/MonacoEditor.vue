@@ -4,7 +4,7 @@
 
 <script setup lang="ts">
 import * as monaco from "monaco-editor/esm/vs/editor/editor.api";
-import { PropType, onMounted, ref, watch } from "vue";
+import { PropType, onMounted, ref, warn, watch } from "vue";
 import { TypstCompileResult } from "../pages/typst/interface";
 import type { editor as editorType } from "monaco-editor";
 import { invoke } from "@tauri-apps/api";
@@ -32,7 +32,7 @@ let monacoEditor: monaco.editor.IStandaloneCodeEditor | null = null;
 
 
 const updateContent = async (editor: ICodeEditor, path: string) => {
-
+   console.warn('updateContent -------')
   if (!editor) return;
 
   // Prevent further updates and immediately flush pending updates
@@ -62,7 +62,7 @@ const updateContent = async (editor: ICodeEditor, path: string) => {
 };
 
 const handleCompile = async () => {
-  console.log('handleCompile')
+
   const editorModel = monacoEditor?.getModel();
   if (editorModel) {
 
