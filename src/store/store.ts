@@ -1,11 +1,10 @@
 import { createPinia, defineStore } from "pinia";
-import { MaybeRef, reactive, ref, toValue, unref } from "vue";
+import { reactive, ref, } from "vue";
 import { IProject } from "../pages/project/interface";
 import { IMode } from "../pages/typst/interface";
 
 const pinia = createPinia();
 const EDITING_FILE = "EDITING_FILE";
-const DEVICE_key = "ICAMERA_DEVICE_ID";
 const PROJECTS_KEY = "PROJECTS_KEY";
 const EDITING_PROJECT = "EDITING_PROJECT";
 
@@ -36,9 +35,14 @@ const useSystemStoreHook = defineStore("system", () => {
   const editingProject = ref<IProject | null>(
     JSON.parse(window.localStorage.getItem(EDITING_PROJECT) ?? "null")
   );
-  const selectProject = (pr: IProject) => {
+  const selectProject = (pr: IProject | null) => {
     editingProject.value = pr;
     window.localStorage.setItem(EDITING_PROJECT, JSON.stringify(pr));
+    if (pr) {
+      setEditingFilePath(pr.path + '/main.typ');
+    } else {
+      setEditingFilePath('');
+    }
   };
 
   const mode = ref<IMode>("all");

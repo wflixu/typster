@@ -15,6 +15,7 @@
           <template #overlay>
             <a-menu @click="({ key: menuKey }: any) => onContextMenuClick(treeKey, menuKey)">
               <a-menu-item key="delete">删除</a-menu-item>
+              <a-menu-item key="rename">重命名</a-menu-item>
             </a-menu>
           </template>
         </a-dropdown>
@@ -35,7 +36,6 @@
             <a-menu-item v-for="pro in projects" :key="pro.path">
               <span>{{ pro.title }}</span> : <span>{{ pro.path }}</span>
             </a-menu-item>
-            
           </a-menu>
         </template>
       </a-dropdown>
@@ -48,11 +48,11 @@
 import type { TreeProps } from 'ant-design-vue';
 import { ref, h, reactive, onMounted, computed } from 'vue';
 import { PlusOutlined, FolderOpenOutlined } from '@ant-design/icons-vue'
-import { readDir, FileEntry, writeTextFile, removeFile } from '@tauri-apps/api/fs';
+import { readDir, FileEntry, writeTextFile, removeFile, renameFile } from '@tauri-apps/api/fs';
 import { useSystemStoreHook } from '../../store/store';
 import { DataNode } from 'ant-design-vue/es/tree';
 import SidebarToggle from './SidebarToggle.vue';
-import { save } from '@tauri-apps/api/dialog';
+import { save , } from '@tauri-apps/api/dialog';
 
 const systemStore = useSystemStoreHook();
 
@@ -60,7 +60,7 @@ const expandedKeys = ref<string[]>([]);
 const selectedKeys = ref<string[]>([]);
 const treeData: TreeProps['treeData'] = reactive([]);
 
-const projects = computed(() =>{
+const projects = computed(() => {
   return systemStore.projects;
 })
 
@@ -68,7 +68,7 @@ const initFiles = async () => {
   if (treeData.length > 0) {
     treeData.splice(0, treeData.length);
   }
-  
+
   const curProject = systemStore.editingProject
   if (!curProject) {
     return
@@ -93,6 +93,7 @@ const initFiles = async () => {
       const node = { title: entry.path.split('/').pop(), key: entry.path, children: [], selectable: true };
       if (entry.children) {
         node.selectable = false;
+        
         processEntries(entry.children, node)
       }
       parent.children?.push(node)
@@ -109,10 +110,28 @@ const initFiles = async () => {
 
 const onContextMenuClick = async (treeKey: string, menuKey: string | number) => {
   console.log(`treeKey: ${treeKey}, menuKey: ${menuKey}`);
+
   if (menuKey == 'delete' && treeKey) {
+    if (treeKey.endsWith('main.typ')) {
+      alert('The main.typ file cannot be deleted')
+      return
+    }
     await removeFile(treeKey);
-    await initFiles();
   }
+  if (menuKey == 'rename' && treeKey) {
+    const filePath = await save({
+      title: "Rename file",
+      filters: [{
+        name: 'untitled',
+        extensions: ['typ', 'bib', 'yml']
+      }],
+      defaultPath: treeKey
+    });
+    if (filePath) {
+      await renameFile(treeKey, filePath);
+    }
+  }
+  await initFiles();
 };
 
 const onSelect = (selectedKeys: string[]) => {
@@ -136,12 +155,11 @@ const onCreateFile = async () => {
   }
 }
 
-const onSelectProject = ({key}:any) =>{
+const onSelectProject = ({ key }: any) => {
 
   let selectedProject = systemStore.projects.find(item => item.path == key)
-  if(selectedProject) {
+  if (selectedProject) {
     systemStore.selectProject(selectedProject)
-    systemStore.setEditingFilePath(selectedProject.path + '/main.typ');
     window.location.reload();
   }
 }
