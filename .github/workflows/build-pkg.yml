@@ -2,7 +2,7 @@ name: "build pkg"
 
 on:
   push:
-    - branches:
+     branches:
       - release
 
 jobs:
