@@ -5,11 +5,12 @@
 <script setup lang="ts">
 import * as monaco from "monaco-editor/esm/vs/editor/editor.api";
 import { PropType, onMounted, ref, watch } from "vue";
-import { TypstCompileResult, TypstPage } from "../pages/typst/interface";
+import { TypstCompileResult } from "../pages/typst/interface";
 import type { editor as editorType } from "monaco-editor";
 import { invoke } from "@tauri-apps/api";
-import { throttle, debounce, relativePath } from './../shared/util'
+import { relativePath } from './../shared/util'
 
+import { throttle, debounce } from 'radash'
 
 type IModelChangedEvent = editorType.IModelChangedEvent;
 type IModelContentChangedEvent = editorType.IModelContentChangedEvent;
@@ -26,14 +27,8 @@ const emit = defineEmits<{
   (e: 'compiled', data: TypstCompileResult): void
 }>()
 
-
-
 const boxRef = ref<HTMLElement>();
 let monacoEditor: monaco.editor.IStandaloneCodeEditor | null = null;
-
-
-
-
 
 
 const updateContent = async (editor: ICodeEditor, path: string) => {
@@ -67,7 +62,7 @@ const updateContent = async (editor: ICodeEditor, path: string) => {
 };
 
 const handleCompile = async () => {
-
+  console.log('handleCompile')
   const editorModel = monacoEditor?.getModel();
   if (editorModel) {
 
@@ -83,22 +78,22 @@ const handleSave = async () => {
   const model = monacoEditor?.getModel();
   if (model) {
     // Removing the preceding slash
-    const path =  relativePath(props.root!, props.path!);
+    const path = relativePath(props.root!, props.path!);
     await invoke("fs_write_file_text", { path, content: model.getValue() });
+    await handleCompile();
   }
 };
 
 
 //@ts-ignore
-const handleCompileThrottle = throttle(handleCompile);
-const handleSaveDebounce = debounce(handleSave, 200, { maxWait: 5000 });
+const handleCompileThrottle = throttle({ interval: 1000 }, handleCompile);
+const handleSaveDebounce = debounce({ delay: 500 }, handleSave);
 
 
 onMounted(() => {
   if (!boxRef.value) {
     return;
   }
-
 
   monacoEditor = monaco.editor.create(boxRef.value!, {
     language: "typst",
@@ -113,11 +108,10 @@ onMounted(() => {
     handleCompileThrottle();
   });
   monacoEditor.onDidChangeModelContent((evt: IModelContentChangedEvent) => {
-    // Compile will update the source file directly in the memory without
-    // writing to the file system first, this will reduce the preview delay.
+    // 输入的时候 每隔1秒执行一次编译
     handleCompileThrottle();
+    // 输入完毕后 500ms 后执行一次保存
     handleSaveDebounce();
-    // handleCompile()
   });
 
   updateContent(monacoEditor, props.path!)
