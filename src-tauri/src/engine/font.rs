@@ -33,8 +33,7 @@ impl FontSearcher {
     pub fn search(&mut self, font_paths: &[PathBuf]) {
         self.search_system();
 
-        #[cfg(feature = "embed-fonts")]
-        self.search_embedded();
+    
 
         for path in font_paths {
             self.search_dir(path);
@@ -43,38 +42,7 @@ impl FontSearcher {
         debug!("discovered {} fonts", self.fonts.len());
     }
 
-    /// Add fonts that are embedded in the binary.
-    #[cfg(feature = "embed-fonts")]
-    fn search_embedded(&mut self) {
-        use typst::foundations::Bytes;
-
-        let mut search = |bytes: &'static [u8]| {
-            for (i, font) in Font::iter(Bytes::from_static(bytes)).enumerate() {
-                self.book.push(font.info().clone());
-                self.fonts.push(FontSlot {
-                    path: PathBuf::new(),
-                    index: i as u32,
-                    font: OnceCell::from(Some(font)),
-                });
-            }
-        };
-
-        // Embed default fonts.
-        search(include_bytes!("../../assets/fonts/LinLibertine_R.ttf"));
-        search(include_bytes!("../../assets/fonts/LinLibertine_RB.ttf"));
-        search(include_bytes!("../../assets/fonts/LinLibertine_RBI.ttf"));
-        search(include_bytes!("../../assets/fonts/LinLibertine_RI.ttf"));
-        search(include_bytes!("../../assets/fonts/NewCMMath-Book.otf"));
-        search(include_bytes!("../../assets/fonts/NewCMMath-Regular.otf"));
-        search(include_bytes!("../../assets/fonts/DejaVuSansMono.ttf"));
-        search(include_bytes!("../../assets/fonts/DejaVuSansMono-Bold.ttf"));
-        search(include_bytes!(
-            "../../assets/fonts/DejaVuSansMono-Oblique.ttf"
-        ));
-        search(include_bytes!(
-            "../../assets/fonts/DejaVuSansMono-BoldOblique.ttf"
-        ));
-    }
+   
 
     /// Search for fonts in the linux system font directories.
     #[cfg(all(unix, not(target_os = "macos")))]

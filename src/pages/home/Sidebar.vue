@@ -48,11 +48,13 @@
 import type { TreeProps } from 'ant-design-vue';
 import { ref, h, reactive, onMounted, computed } from 'vue';
 import { PlusOutlined, FolderOpenOutlined } from '@ant-design/icons-vue'
-import { readDir, FileEntry, writeTextFile, removeFile, renameFile } from '@tauri-apps/api/fs';
+// @ts-ignore
+import { readDir, FileEntry, writeTextFile, remove, rename } from '@tauri-apps/plugin-fs';
 import { useSystemStoreHook } from '../../store/store';
 import { DataNode } from 'ant-design-vue/es/tree';
 import SidebarToggle from './SidebarToggle.vue';
-import { save , } from '@tauri-apps/api/dialog';
+// @ts-ignore
+import { save , } from '@tauri-apps/plugin-dialog';
 
 const systemStore = useSystemStoreHook();
 
@@ -116,7 +118,7 @@ const onContextMenuClick = async (treeKey: string, menuKey: string | number) => 
       alert('The main.typ file cannot be deleted')
       return
     }
-    await removeFile(treeKey);
+    await remove(treeKey);
   }
   if (menuKey == 'rename' && treeKey) {
     const filePath = await save({
@@ -128,7 +130,7 @@ const onContextMenuClick = async (treeKey: string, menuKey: string | number) => 
       defaultPath: treeKey
     });
     if (filePath) {
-      await renameFile(treeKey, filePath);
+      await rename(treeKey, filePath);
     }
   }
   await initFiles();

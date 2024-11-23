@@ -2,6 +2,7 @@ use crate::ipc::events::view;
 use crate::project::{Project, ProjectManager};
 use std::fs;
 use std::sync::Arc;
+use tauri_plugin_dialog::DialogExt;
 use tauri::api::dialog::FileDialogBuilder;
 use tauri::{Manager, Runtime, State, WindowMenuEvent};
 use typst::foundations::Smart;

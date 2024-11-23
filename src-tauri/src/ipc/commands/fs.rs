@@ -51,7 +51,7 @@ pub async fn export_pdf<R: Runtime>(
     if let Some(project) = project_manager.get_project(&window) {
         let cache = project.cache.read().unwrap();
         if let Some(doc) = &cache.document {
-            let pdf = typst_pdf::pdf(doc, Smart::Auto, None);
+            let pdf = typst_pdf::pdf(doc, Smart::Auto);
             let _ = fs::write(path_buf, pdf);
         }
     }

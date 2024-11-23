@@ -1,0 +1,29 @@
+{
+    "identifier": "main-capability",
+    "description": "Capability for the main window",
+    "windows": [
+        "main"
+    ],
+    "permissions": [
+        "core:default",
+        "fs:allow-read-file",
+        "fs:allow-write-file",
+        "fs:allow-read-dir",
+        "fs:allow-copy-file",
+        "fs:allow-mkdir",
+        "fs:allow-remove",
+        "fs:allow-rename",
+        "fs:allow-exists",
+        {
+            "identifier": "fs:scope",
+            "allow": [
+                "$HOME/**/*"
+            ]
+        },
+        "core:window:allow-center",
+        "core:window:allow-set-position",
+        "core:window:allow-set-size",
+        "core:window:allow-set-maximizable",
+        "core:window:allow-set-minimizable"
+    ]
+}
