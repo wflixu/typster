@@ -13,6 +13,8 @@ use std::io;
 use std::path::{Component, Path, PathBuf};
 use std::sync::Arc;
 use tauri::{Runtime, State, Window};
+use anyhow::{self, Context};
+
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
@@ -39,6 +41,9 @@ impl Serialize for Error {
 
 pub type Result<T> = std::result::Result<T, Error>;
 
+/// Retrieves the project and resolves the path. Furthermore,
+/// this function will resolve the path relative to project's root
+/// and checks whether the path belongs to the project root.
 pub fn project<R: Runtime>(
     window: &Window<R>,
     project_manager: &State<Arc<ProjectManager<R>>>,

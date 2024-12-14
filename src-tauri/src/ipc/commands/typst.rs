@@ -17,7 +17,6 @@ use std::sync::Arc;
 use std::time::Instant;
 use tauri::Runtime;
 use typst::diag::Severity;
-use typst::eval::Tracer;
 use typst::visualize::Color;
 use typst::World;
 use typst_ide::{Completion, CompletionKind};
@@ -105,10 +104,10 @@ pub async fn typst_compile_doc<R: Runtime>(
 
     debug!("compiling {:?}: {:?}", path, project);
     let now = Instant::now();
-    let mut tracer = Tracer::new();
+
     let mut pages: Vec<TypstPage> = Vec::new();
     let mut diags: Vec<TypstSourceDiagnostic> = Vec::new();
-    match typst::compile(&*world, &mut tracer) {
+    match typst::compile(&*world).output {
         Ok(doc) => {
             let elapsed = now.elapsed();
             debug!(
@@ -216,7 +215,7 @@ pub async fn typst_render<R: Runtime>(
     {
         let now = Instant::now();
 
-        let bmp = typst_render::render(&p.frame, scale, Color::WHITE);
+        let bmp = typst_render::render(p, scale);
         if let Ok(image) = bmp.encode_png() {
             let elapsed = now.elapsed();
             debug!(

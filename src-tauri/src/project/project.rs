@@ -1,7 +1,8 @@
 use crate::project::ProjectWorld;
+use chrono::{DateTime, Utc};
 use log::debug;
 use serde::{Deserialize, Serialize};
-use std::fmt::{Debug, Formatter};
+use std::fmt::{self,Debug, Display, Formatter};
 use std::path::{Path, PathBuf};
 use std::sync::{Mutex, RwLock};
 use std::{fs, io};
@@ -10,7 +11,7 @@ use typst::diag::{FileError, FileResult};
 use typst::model::Document;
 use typst::syntax::VirtualPath;
 
-const PATH_PROJECT_CONFIG_FILE: &str = ".typstudio/project.json";
+const PATH_PROJECT_CONFIG_FILE: &str = ".typster/project.json";
 
 pub struct Project {
     pub root: PathBuf,
@@ -26,8 +27,37 @@ pub struct ProjectCache {
 
 #[derive(Serialize, Deserialize, Debug, Clone, Hash)]
 pub struct ProjectConfig {
+    pub input: Option<PathBuf>,
+    pub root: Option<PathBuf>,
     pub main: Option<PathBuf>,
+    pub font_paths: Vec<PathBuf>,
+    pub ignore_system_fonts: bool,
+    pub creation_timestamp: Option<DateTime<Utc>>,
+    pub diagnostic_format: DiagnosticFormat,
+    pub package_path: Option<PathBuf>,
+    pub package_cache_path: Option<PathBuf>,
+    pub jobs: Option<usize>,
+    pub cert: Option<PathBuf>,
 }
+
+/// Which format to use for diagnostics.
+#[derive(Serialize, Deserialize, Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub enum DiagnosticFormat {
+    Human,
+    Short,
+}
+
+impl Display for DiagnosticFormat {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            DiagnosticFormat::Human => write!(f, "human"),
+            DiagnosticFormat::Short => write!(f, "short"),
+        }
+    }
+}
+
+
+
 
 #[derive(Error, Debug)]
 pub enum ProjectConfigError {
@@ -71,7 +101,7 @@ impl ProjectConfig {
         }
 
         // ??
-        world.set_main(None);
+        // world.set_main(None);
 
         Err(FileError::NotSource)
     }
@@ -80,7 +110,17 @@ impl ProjectConfig {
 impl Default for ProjectConfig {
     fn default() -> Self {
         Self {
-            main: Some(PathBuf::from("/main.typ")),
+            input: None,
+            root: None,
+            main: None,
+            font_paths: Vec::new(),
+            ignore_system_fonts: false,
+            creation_timestamp: Some(Utc::now()),
+            diagnostic_format: DiagnosticFormat::Human,
+            package_path: None,
+            package_cache_path: None,
+            jobs: None,
+            cert: None,
         }
     }
 }
@@ -92,7 +132,7 @@ impl Project {
             ProjectConfig::read_from_file(path.join(PATH_PROJECT_CONFIG_FILE)).unwrap_or_default();
 
         Self {
-            world: ProjectWorld::new(path.clone()).into(),
+            world: Mutex::new(ProjectWorld::new(path.clone(), config.clone()).expect("failed to create project world")),
             cache: RwLock::new(Default::default()),
             config: RwLock::new(config),
             root: path,

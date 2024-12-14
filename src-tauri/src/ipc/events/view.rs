@@ -1,5 +1,5 @@
 use serde::Serialize;
-use tauri::{Runtime, Window};
+use tauri::{Emitter, Runtime, Window};
 
 // For some reason, Tauri requires an event payload...
 #[derive(Debug, Clone, Serialize)]

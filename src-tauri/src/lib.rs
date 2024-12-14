@@ -5,15 +5,13 @@
 mod cmd;
 mod engine;
 mod ipc;
-mod menu;
 mod project;
 
-use crate::menu::handle_menu_event;
 use crate::project::ProjectManager;
 use env_logger::Env;
 use log::info;
 use std::sync::Arc;
-use tauri::{AboutMetadata, CustomMenuItem, Menu, MenuItem, Submenu, Wry};
+use tauri::Wry;
 
 pub fn run() {
     env_logger::init_from_env(Env::default().default_filter_or("debug"));
@@ -27,8 +25,6 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
-        // .menu(build_menu())
-        // .on_menu_event(handle_menu_event)
         .manage(project_manager)
         .invoke_handler(tauri::generate_handler![
             cmd::greet,
@@ -49,5 +45,3 @@ pub fn run() {
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
-
-
