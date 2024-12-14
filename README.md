@@ -59,7 +59,7 @@ pnpm tauri icon
 
 ## Other similar projects:
 
-- https://github.com/Cubxity/typstudio
+- https://github.com/Cubxity/typster
 - https://github.com/Enter-tainer/typst-preview
 
 ## Related projects

@@ -128,8 +128,18 @@ impl Default for ProjectConfig {
 impl Project {
     pub fn load_from_path(path: PathBuf) -> Self {
         let path = fs::canonicalize(&path).unwrap_or(path);
-        let config: ProjectConfig =
-            ProjectConfig::read_from_file(path.join(PATH_PROJECT_CONFIG_FILE)).unwrap_or_default();
+        let config: ProjectConfig = {
+            match ProjectConfig::read_from_file(path.join(PATH_PROJECT_CONFIG_FILE)) {
+                Ok(config) => config,
+                Err(e) => {
+                    let mut config = ProjectConfig::default();
+                    config.input = Some(path.join("main.typ"));
+                    config.root = Some(path.clone());
+                    config.main = Some(path.join("main.typ"));
+                    config
+                }
+            }
+        };
 
         Self {
             world: Mutex::new(ProjectWorld::new(path.clone(), config.clone()).expect("failed to create project world")),

@@ -15,7 +15,7 @@ use tauri::Wry;
 
 pub fn run() {
     env_logger::init_from_env(Env::default().default_filter_or("debug"));
-    info!("initializing typstudio");
+    info!("initializing typster");
 
     let project_manager = Arc::new(ProjectManager::<Wry>::new());
     if let Ok(watcher) = ProjectManager::init_watcher(project_manager.clone()) {

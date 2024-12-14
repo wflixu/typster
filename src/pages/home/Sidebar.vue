@@ -55,6 +55,7 @@ import { DataNode } from 'ant-design-vue/es/tree';
 import SidebarToggle from './SidebarToggle.vue';
 // @ts-ignore
 import { save , } from '@tauri-apps/plugin-dialog';
+import { join } from '@tauri-apps/api/path';
 
 const systemStore = useSystemStoreHook();
 
@@ -85,18 +86,18 @@ const initFiles = async () => {
 
 
   // Reads the `$APPDATA/users` directory recursively
-  const entries = await readDir(root.key, { recursive: true });
+  const entries = await readDir(root.key);
 
-  function processEntries(entries: FileEntry[], parent: DataNode) {
+  async function processEntries(entries: FileEntry[], parent: DataNode) {
     for (const entry of entries) {
       if (entry.name?.endsWith('.DS_Store')) {
         continue;
       }
-      const node = { title: entry.path.split('/').pop(), key: entry.path, children: [], selectable: true };
-      if (entry.children) {
+      const node = { title: entry.name, key: join(parent.key, entry.name),  children: [], selectable: true };
+      if (entry.isDirectory) {
         node.selectable = false;
         
-        processEntries(entry.children, node)
+        processEntries(await readDir(node.key), node)
       }
       parent.children?.push(node)
     }
