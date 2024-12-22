@@ -1,6 +1,6 @@
-use crate::project::ProjectWorld;
+use super::world::ProjectWorld;
 use chrono::{DateTime, Utc};
-use log::debug;
+use log::{debug, info};
 use serde::{Deserialize, Serialize};
 use std::fmt::{self,Debug, Display, Formatter};
 use std::path::{Path, PathBuf};
@@ -94,8 +94,8 @@ impl ProjectConfig {
 
     pub fn apply_main(&self, project: &Project, world: &mut ProjectWorld) -> FileResult<()> {
         if let Some(main) = self.main.as_ref() {
-            let vpath = VirtualPath::new(main);
-            debug!("setting main path {:?} for {:?}", main, project);
+            let vpath = VirtualPath::within_root(main, &project.root).expect("apply_main error");
+            debug!("setting main path {:?} for {:?}, vpath: {:?}", main, project, vpath);
             world.set_main_path(vpath);
             return Ok(());
         }
@@ -133,14 +133,14 @@ impl Project {
                 Ok(config) => config,
                 Err(e) => {
                     let mut config = ProjectConfig::default();
-                    config.input = Some(path.join("main.typ"));
+                    config.input = Some(PathBuf::from("main.typ"));
                     config.root = Some(path.clone());
                     config.main = Some(path.join("main.typ"));
                     config
                 }
             }
         };
-
+        info!("the config is: {:#?}", &config);
         Self {
             world: Mutex::new(ProjectWorld::new(path.clone(), config.clone()).expect("failed to create project world")),
             cache: RwLock::new(Default::default()),

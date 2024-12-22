@@ -3,7 +3,6 @@
 #![allow(unused_imports, unused_variables, dead_code, unused_mut)]
 
 mod cmd;
-mod engine;
 mod ipc;
 mod project;
 

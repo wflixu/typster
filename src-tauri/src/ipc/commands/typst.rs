@@ -87,14 +87,15 @@ pub async fn typst_compile_doc<R: Runtime>(
     path: PathBuf,
     content: String,
 ) -> Result<(Vec<TypstPage>, Vec<TypstSourceDiagnostic>)> {
-    let project = project(&window, &project_manager)?;
 
+    let project = project(&window, &project_manager)?;
     let mut world = project.world.lock().unwrap();
     let source_id = world
         .slot_update(&path, Some(content.clone()))
         .map_err(Into::<Error>::into)?;
 
     if !world.is_main_set() {
+        
         let config = project.config.read().unwrap();
         if config.apply_main(&project, &mut world).is_err() {
             debug!("skipped compilation for {:?} (main not set)", project);
@@ -102,7 +103,6 @@ pub async fn typst_compile_doc<R: Runtime>(
         }
     }
 
-    debug!("compiling {:?}: {:?}", path, project);
     let now = Instant::now();
 
     let mut pages: Vec<TypstPage> = Vec::new();
@@ -163,8 +163,6 @@ pub async fn typst_compile_doc<R: Runtime>(
             };
 
             diags = diagnostics.clone();
-
-            info!("############## {:?}", &diags);
         }
     }
 
@@ -232,7 +230,6 @@ pub async fn typst_render<R: Runtime>(
             });
         }
     }
-    info!("-----------pages");
 
     Err(Error::Unknown)
 }

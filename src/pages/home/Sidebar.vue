@@ -82,27 +82,26 @@ const initFiles = async () => {
     key: curProject.path,
     selectable: false,
     children: []
-  }
+  } as DataNode;
 
 
   // Reads the `$APPDATA/users` directory recursively
-  const entries = await readDir(root.key);
+  const entries = await readDir(root.key as string);
 
   async function processEntries(entries: FileEntry[], parent: DataNode) {
     for (const entry of entries) {
       if (entry.name?.endsWith('.DS_Store')) {
         continue;
       }
-      const node = { title: entry.name, key: join(parent.key, entry.name),  children: [], selectable: true };
+      const node = { title: entry.name, key: await join(parent.key as string,  entry.name),  children: [], selectable: true };
       if (entry.isDirectory) {
         node.selectable = false;
-        
-        processEntries(await readDir(node.key), node)
+       await  processEntries(await readDir(node.key as string), node)
       }
       parent.children?.push(node)
     }
   }
-  processEntries(entries, root)
+  await processEntries(entries, root)
   treeData.push(root)
 
   if (systemStore.editingFilePath) {

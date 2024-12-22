@@ -26,6 +26,18 @@
         "$HOME/**/*"
       ]
     },
+    {
+      "identifier": "fs:allow-read-file",
+      "allow": [
+        "$HOME/**/*"
+      ]
+    },
+    {
+      "identifier": "fs:allow-write-file",
+      "allow": [
+        "$HOME/**/*"
+      ]
+    },
     "core:window:allow-center",
     "core:window:allow-set-position",
     "core:window:allow-set-size",

@@ -1,5 +1,5 @@
 use chrono::{DateTime, Datelike, FixedOffset, Local, Utc};
-use log::info;
+use log::{debug, info};
 use parking_lot::{Mutex, RwLock};
 use std::cell::{OnceCell, RefCell, RefMut};
 use std::collections::hash_map::Entry;
@@ -24,7 +24,7 @@ use super::package::{self, PrintDownload};
 
 use super::{download_package, ProjectConfig};
 
-static STDIN_ID: LazyLock<FileId> = LazyLock::new(|| FileId::new_fake(VirtualPath::new("<stdin>")));
+
 
 /// An error that occurs during world construction.
 #[derive(Debug)]
@@ -37,6 +37,26 @@ pub enum WorldCreationError {
     RootNotFound(PathBuf),
     /// Another type of I/O error.
     Io(io::Error),
+}
+impl fmt::Display for WorldCreationError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            WorldCreationError::InputNotFound(path) => {
+                write!(f, "input file not found (searched at {})", path.display())
+            }
+            WorldCreationError::InputOutsideRoot => {
+                write!(f, "source file must be contained in project root")
+            }
+            WorldCreationError::RootNotFound(path) => {
+                write!(
+                    f,
+                    "root directory not found (searched at {})",
+                    path.display()
+                )
+            }
+            WorldCreationError::Io(err) => write!(f, "{err}"),
+        }
+    }
 }
 
 /// Lazily processes data for a file.
@@ -95,6 +115,7 @@ impl FileSlot {
         project_root: &Path,
         package_storage: &PackageStorage,
     ) -> FileResult<Source> {
+        info!("fn source: {:?}", self.id.vpath());
         self.source.get_or_init(
             || read(self.id, project_root, package_storage),
             |data, prev| {
@@ -111,6 +132,7 @@ impl FileSlot {
 
     /// Retrieve the file's bytes.
     fn file(&mut self, project_root: &Path, package_storage: &PackageStorage) -> FileResult<Bytes> {
+        info!("fn file: {:?}", self.id.vpath());
         self.file.get_or_init(
             || read(self.id, project_root, package_storage),
             |data, _| Ok(data.into()),
@@ -141,7 +163,8 @@ fn system_path(
         buf = package_storage.prepare_package(spec, &mut PrintDownload(&spec))?;
         root = &buf;
     }
-
+    info!("system_path: {:?}", root, );
+    info!("id path: {:?}", id.vpath()); 
     // Join the path to the root. If it tries to escape, deny
     // access. Note: It can still escape via symlinks.
     id.vpath().resolve(root).ok_or(FileError::AccessDenied)
@@ -152,20 +175,23 @@ fn system_path(
 /// If the ID represents stdin it will read from standard input,
 /// otherwise it gets the file path of the ID and reads the file from disk.
 fn read(id: FileId, project_root: &Path, package_storage: &PackageStorage) -> FileResult<Vec<u8>> {
-    if id == *STDIN_ID {
-        read_from_stdin()
-    } else {
-        read_from_disk(&system_path(project_root, id, package_storage)?)
-    }
+    info!("read file: {}", project_root.display());
+    read_from_disk(&system_path(project_root, id, package_storage)?)
+    
 }
 
 /// Read a file from disk.
 fn read_from_disk(path: &Path) -> FileResult<Vec<u8>> {
+    info!("reading file: {}", path.display());
     let f = |e| FileError::from_io(e, path);
     if fs::metadata(path).map_err(f)?.is_dir() {
         Err(FileError::IsDirectory)
     } else {
-        fs::read(path).map_err(f)
+        debug!("reading file: {}", path.display());
+        fs::read(path).map_err(|e| {
+            eprintln!("Error reading from disk: {}", e); // Print the error
+            f(e) // Call the error handling function f
+        })
     }
 }
 
@@ -261,16 +287,46 @@ pub struct ProjectWorld {
 }
 
 impl ProjectWorld {
+    pub fn new(root: PathBuf, config: ProjectConfig) -> Result<Self, WorldCreationError> {
+        let main_path = VirtualPath::within_root(&config.main.expect("input is required"), &root)
+            .ok_or(WorldCreationError::InputOutsideRoot)?;
+         info!("main_path: {:?} root: {:?} ", main_path, root);
+        let main: FileId = FileId::new(None, main_path);
+
+        let library: Library = { Library::builder().build() };
+
+        let now = Now::System(OnceLock::new());
+        let fonts = Fonts::searcher().search();
+
+        Ok(Self {
+            workdir: Some(root.clone()),
+            root,
+            main,
+            library: LazyHash::new(library),
+            book: LazyHash::new(fonts.book),
+            fonts: fonts.fonts,
+            slots: Mutex::new(HashMap::new()),
+            package_storage: package::storage(
+                config.package_path,
+                config.package_cache_path,
+                config.cert,
+            ),
+            now,
+            export_cache: ExportCache::new(),
+        })
+    }
     pub fn slot_update<P: AsRef<Path>>(
         &mut self,
         path: P,
         content: Option<String>,
     ) -> FileResult<FileId> {
         let vpath = VirtualPath::new(path);
+        info!("slot update fn vpath: {:?}", vpath);
         let id = FileId::new(None, vpath.clone());
         self.slot(id, |slot| {
+            
             if let Some(res) = &mut slot.source.data {
-               
+                info!("res: {:?} vpath: {:?} content: {:?} ", res, vpath, content);
                 match self.take_or_read(&vpath, content.clone()) {
                     Ok(content) => match res {
                         Ok(src) => {
@@ -287,6 +343,7 @@ impl ProjectWorld {
             }
             // Write content to slot file
             if let Some(res) = &mut slot.file.data {
+                info!("res: {:?} vpath: {:?} content: {:?} ", res, vpath, content);
                 match self.take_or_read_bytes(&vpath, content.clone()) {
                     Ok(bytes) => match res {
                         Ok(b) => {
@@ -319,33 +376,7 @@ impl ProjectWorld {
         true
     }
 
-    pub fn new(root: PathBuf, config: ProjectConfig) -> Result<Self, WorldCreationError> {
-        let main_path = VirtualPath::within_root(&root.join("main.typ"), &root)
-            .ok_or(WorldCreationError::InputOutsideRoot)?;
-        let main: FileId = FileId::new(None, main_path);
-
-        let library: Library = { Library::builder().build() };
-
-        let now = Now::System(OnceLock::new());
-        let fonts = Fonts::searcher().search();
-
-        Ok(Self {
-            workdir: Some(root.clone()),
-            root,
-            main,
-            library: LazyHash::new(library),
-            book: LazyHash::new(fonts.book),
-            fonts: fonts.fonts,
-            slots: Mutex::new(HashMap::new()),
-            package_storage: package::storage(
-                config.package_path,
-                config.package_cache_path,
-                config.cert,
-            ),
-            now,
-            export_cache: ExportCache::new(),
-        })
-    }
+    
 
     /// Access the canonical slot for the given file id.
     fn slot<F, T>(&self, id: FileId, f: F) -> T
@@ -463,35 +494,6 @@ impl World for ProjectWorld {
     }
 }
 
-struct PathSlot {
-    id: FileId,
-    path: PathBuf,
-    source: OnceCell<FileResult<Source>>,
-    buffer: OnceCell<FileResult<Bytes>>,
-}
-
-impl PathSlot {
-    fn source(&self) -> FileResult<Source> {
-        self.source
-            .get_or_init(|| {
-                let text = fs::read_to_string(&self.path)
-                    .map_err(|e| FileError::from_io(e, &self.path))?;
-                Ok(Source::new(self.id, text))
-            })
-            .clone()
-    }
-
-    fn file(&self) -> FileResult<Bytes> {
-        // TODO: Unsure whether buffer should be implemented this way. This may cause a lot of memory usage on projects with a lot of large files.
-        self.buffer
-            .get_or_init(|| {
-                fs::read(&self.path)
-                    .map(Bytes::from)
-                    .map_err(|e| FileError::from_io(e, &self.path))
-            })
-            .clone()
-    }
-}
 
 /// Caches exported files so that we can avoid re-exporting them if they haven't
 /// changed.
