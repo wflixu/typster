@@ -45,6 +45,7 @@
       },
       "files": {},
       "hardenedRuntime": true,
+       "signingIdentity": "6B979C438205BE9EEB54B5068A18AD32486B6572",
       "minimumSystemVersion": "14.0.0"
     }
   },
