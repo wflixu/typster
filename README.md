@@ -1,14 +1,16 @@
 ![typster](./app-icon.png)
 
-# [WIP] typster 
+#  typster 
 
-A W.I.P desktop application for a new markup-based typesetting language, [typst](https://github.com/typst/typst).
+ A desktop application for a new markup-based typesetting language, [typst](https://github.com/typst/typst).
 Typster is built using [Tauri](https://tauri.app/).
 
 
 # features
-- [ ]
-- [ ] 
+- [x] auto code completion
+- [x] export PDF file 
+- [x] error tip
+- [x] use latest typst v0.12
 
 
 ## screenshot
@@ -45,7 +47,7 @@ pnpm tauri icon
 
 ## Other similar projects:
 
-- https://github.com/Cubxity/typstudio
+- https://github.com/Cubxity/typster
 - https://github.com/Enter-tainer/typst-preview
 
 ## Related projects

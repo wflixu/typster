@@ -6,7 +6,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue';
-import { invoke } from '@tauri-apps/api';
+import { invoke } from '@tauri-apps/api/core';
 import defaultUrl from './../../assets/rendering.svg'
 
 import type { TypstRenderResponse } from './interface';

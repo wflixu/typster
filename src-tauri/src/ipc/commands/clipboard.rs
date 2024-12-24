@@ -1,5 +1,4 @@
-use super::Error;
-use super::Result;
+use super::{Error, Result};
 use crate::ipc::commands::project_path;
 use crate::project::ProjectManager;
 use arboard::Clipboard;

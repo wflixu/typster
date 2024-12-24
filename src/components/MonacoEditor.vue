@@ -7,7 +7,7 @@ import * as monaco from "monaco-editor/esm/vs/editor/editor.api";
 import { PropType, onMounted, ref, warn, watch } from "vue";
 import { TypstCompileResult } from "../pages/typst/interface";
 import type { editor as editorType } from "monaco-editor";
-import { invoke } from "@tauri-apps/api";
+import { invoke } from "@tauri-apps/api/core";
 import { relativePath } from './../shared/util'
 
 import { throttle, debounce } from 'radash'

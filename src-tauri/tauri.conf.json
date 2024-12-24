@@ -1,86 +1,60 @@
 {
+  "productName": "typster",
+  "version": "0.12.0",
+  "mainBinaryName": "typster",
+  "identifier": "cn.wflixu.typster",
   "build": {
     "beforeDevCommand": "pnpm dev",
     "beforeBuildCommand": "pnpm build",
-    "devPath": "http://localhost:1420",
-    "distDir": "../dist",
-    "withGlobalTauri": false,
-    "features": [
-      "embed-fonts"
-    ]
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:1420"
   },
-  "package": {
-    "productName": "typster",
-    "version": "0.4.0"
-  },
-  "tauri": {
-    "macOSPrivateApi": true,
-    "allowlist": {
-      "all": true,
-      "http": {
-        "all": true,
-        "scope": [
-          "http://127.0.0.1:8443/chunk/*"
-        ]
-      },
-      "dialog": {
-        "all": true,
-        "ask": true,
-        "confirm": true,
-        "message": true,
-        "open": true,
-        "save": true
-      },
-      "path": {
-        "all": true
-      },
-      "fs": {
-        "all": true,
-        "scope": [
-          "$HOME/**/*"
-        ]
-      },
-      "shell": {
-        "all": true,
-        "open": true
-      },
-      "clipboard": {
-        "all": true,
-        "readText": true,
-        "writeText": true
-      },
-      "window": {
-        "all": true,
-        "startDragging": true,
-        "setPosition": true
+  "bundle": {
+    "active": true,
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "targets": [
+      "dmg",
+      "msi"
+    ],
+
+    "windows": {
+      "webviewInstallMode": {
+        "type": "embedBootstrapper"
       }
     },
-    "bundle": {
-      "active": true,
-      "icon": [
-        "icons/32x32.png",
-        "icons/128x128.png",
-        "icons/128x128@2x.png",
-        "icons/icon.icns",
-        "icons/icon.ico"
-      ],
-      "identifier": "cn.wflixu.typster",
-      "windows": {
-        "webviewInstallMode": {
-          "type": "embedBootstrapper"
+    "macOS": {
+      "dmg": {
+        "appPosition": {
+          "x": 180,
+          "y": 170
+        },
+        "applicationFolderPosition": {
+          "x": 480,
+          "y": 170
+        },
+        "windowSize": {
+          "height": 400,
+          "width": 660
         }
       },
-      "targets": [
-        "dmg",
-        "msi"
-      ]
-    },
-    "security": {
-      "csp": null
-    },
-    "updater": {
-      "active": false
-    },
+      "files": {},
+      "hardenedRuntime": true,
+       "signingIdentity": "6B979C438205BE9EEB54B5068A18AD32486B6572",
+      "minimumSystemVersion": "14.0.0"
+    }
+  },
+  
+
+  "plugins": {},
+  "app": {
+    "macOSPrivateApi": true,
+    "withGlobalTauri": false,
     "windows": [
       {
         "fullscreen": false,
@@ -95,6 +69,9 @@
         "minWidth": 800,
         "minHeight": 400
       }
-    ]
+    ],
+    "security": {
+      "csp": null
+    }
   }
 }

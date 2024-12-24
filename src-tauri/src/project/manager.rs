@@ -6,7 +6,7 @@ use notify::{Config, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, RwLock};
-use tauri::{Runtime, Window};
+use tauri::{Emitter, Runtime, WebviewWindow, Window};
 use tokio::sync::mpsc::channel;
 
 #[derive(Clone, Copy, Debug)]
