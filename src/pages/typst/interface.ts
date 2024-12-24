@@ -61,15 +61,4 @@ export interface TypstCompleteResponse {
   completions: TypstCompletion[];
 }
 
-export const autocomplete = (
-  path: string,
-  content: string,
-  offset: number,
-  explicit: boolean
-): Promise<TypstCompleteResponse> =>
-  invoke<TypstCompleteResponse>("typst_autocomplete", {
-    path,
-    content,
-    offset,
-    explicit,
-  });
+

@@ -63,7 +63,7 @@ impl From<Completion> for TypstCompletion {
         }
     }
 }
-
+// todo delete
 #[tauri::command]
 pub async fn typst_slot_update<R: Runtime>(
     window: tauri::Window<R>,
@@ -168,6 +168,7 @@ pub async fn typst_compile_doc<R: Runtime>(
 
     Ok((pages, diags))
 }
+
 
 pub fn get_range_position(text: &str, rang: Range<usize>) -> (usize, usize) {
     let mut ln = 0;

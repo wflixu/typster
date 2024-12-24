@@ -75,7 +75,6 @@ const handleCompile = async () => {
   }
 };
 const handleSave = async () => {
-  return;
   const model = monacoEditor?.getModel();
   if (model) {
     // Removing the preceding slash

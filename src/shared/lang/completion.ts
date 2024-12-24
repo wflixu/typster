@@ -6,12 +6,27 @@ import type {
 } from "monaco-editor";
 import { languages } from "monaco-editor";
 
+import { invoke } from "@tauri-apps/api/core";
+
 import CompletionTriggerKind = languages.CompletionTriggerKind;
-import { autocomplete, TypstCompletionKind } from "../../pages/typst/interface";
+import { TypstCompleteResponse, TypstCompletionKind } from "../../pages/typst/interface";
+
+export const autocomplete = (
+  path: string,
+  content: string,
+  offset: number,
+  explicit: boolean
+): Promise<TypstCompleteResponse> =>
+  invoke<TypstCompleteResponse>("typst_autocomplete", {
+    path,
+    content,
+    offset,
+    explicit,
+  });
+
 
 export class TypstCompletionProvider
-  implements languages.CompletionItemProvider
-{
+  implements languages.CompletionItemProvider {
   triggerCharacters = [" ", "(", "[", "{", "$", "@", "#", "."];
 
   async provideCompletionItems(
@@ -79,3 +94,4 @@ export class TypstCompletionProvider
     };
   }
 }
+

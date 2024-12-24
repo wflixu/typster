@@ -54,7 +54,7 @@ import { useSystemStoreHook } from '../../store/store';
 import { DataNode } from 'ant-design-vue/es/tree';
 import SidebarToggle from './SidebarToggle.vue';
 // @ts-ignore
-import { save , } from '@tauri-apps/plugin-dialog';
+import { save } from '@tauri-apps/plugin-dialog';
 import { join } from '@tauri-apps/api/path';
 
 const systemStore = useSystemStoreHook();
@@ -93,9 +93,10 @@ const initFiles = async () => {
       if (entry.name?.endsWith('.DS_Store')) {
         continue;
       }
-      const node = { title: entry.name, key: await join(parent.key as string,  entry.name),  children: [], selectable: true };
+      const node = { title: entry.name, key: await join(parent.key as string,  entry.name),  children: [], selectable: true } as DataNode;
       if (entry.isDirectory) {
         node.selectable = false;
+        node.isLeaf = false
        await  processEntries(await readDir(node.key as string), node)
       }
       parent.children?.push(node)
@@ -145,14 +146,14 @@ const onCreateFile = async () => {
     title: "新建文件",
     filters: [{
       name: 'untitled',
-      extensions: ['typ', 'bib', 'yml']
+      extensions: ['typ', 'bib', 'yml', 'yaml']
     }],
     defaultPath: systemStore.editingProject?.path
 
   });
   console.warn(filePath)
   if (filePath) {
-    await writeTextFile({ path: filePath, contents: ' ' });
+    await writeTextFile(filePath , ' ' );
     await initFiles();
   }
 }

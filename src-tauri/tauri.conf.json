@@ -1,6 +1,6 @@
 {
   "productName": "typster",
-  "version": "0.4.0",
+  "version": "0.12.0",
   "mainBinaryName": "typster",
   "identifier": "cn.wflixu.typster",
   "build": {
