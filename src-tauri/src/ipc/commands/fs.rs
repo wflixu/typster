@@ -1,6 +1,7 @@
 use super::{Error, Result};
 use crate::ipc::commands::project_path;
 use crate::project::{Project, ProjectManager};
+use ecow::eco_format;
 use enumset::EnumSetType;
 use log::info;
 use serde::Serialize;
@@ -12,12 +13,20 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use tauri::{Runtime, State, Window};
 use typst::foundations::Smart;
+use typst_pdf::{PdfOptions, PdfStandard, PdfStandards};
+use chrono::{DateTime, Datelike, Utc, Timelike};
+use typst::foundations::Datetime;
 
-#[derive(Serialize, Debug)]
-pub struct FileItem {
-    pub name: String,
-    #[serde(rename = "type")]
-    pub file_type: FileType,
+/// Convert [`chrono::DateTime`] to [`Datetime`]
+pub fn convert_datetime(date_time:DateTime<Utc>) -> Option<Datetime> {
+    Datetime::from_ymd_hms(
+        date_time.year(),
+        date_time.month().try_into().ok()?,
+        date_time.day().try_into().ok()?,
+        date_time.hour().try_into().ok()?,
+        date_time.minute().try_into().ok()?,
+        date_time.second().try_into().ok()?,
+    )
 }
 
 #[derive(EnumSetType, Serialize, Debug)]
@@ -27,16 +36,24 @@ pub enum FileType {
     Directory,
 }
 
+#[derive(Serialize, Debug)]
+pub struct FileItem {
+    pub name: String,
+    #[serde(rename = "type")]
+    pub file_type: FileType,
+}
+
 #[tauri::command]
 pub async fn load_project_from_path<R: Runtime>(
     window: Window<R>,
     project_manager: State<'_, Arc<ProjectManager<R>>>,
     path: String,
-) -> Result<()> {
+) -> std::result::Result<(), Error> {
     let path_buf = PathBuf::from(&path);
     let project = Arc::new(Project::load_from_path(path_buf));
     project_manager.set_project(&window, Some(project));
     info!("succeed load_project_from_path {}", &path);
+    
     Ok(())
 }
 
@@ -45,18 +62,39 @@ pub async fn export_pdf<R: Runtime>(
     window: Window<R>,
     project_manager: State<'_, Arc<ProjectManager<R>>>,
     path: String,
-) -> Result<u64> {
-    info!("start export pdf to path {}", &path);
-    let path_buf = PathBuf::from(&path);
-    if let Some(project) = project_manager.get_project(&window) {
-        let cache = project.cache.read().unwrap();
-        if let Some(doc) = &cache.document {
-            let pdf = typst_pdf::pdf(doc, Smart::Auto, None);
-            let _ = fs::write(path_buf, pdf);
-        }
-    }
+) -> std::result::Result<u64, Error> {
+    info!("Starting export of PDF to path: {}", &path);
 
-    Ok(1)
+    let path_buf = PathBuf::from(&path);
+
+    // 获取项目
+    if let Some(project) = project_manager.get_project(&window) {
+        let cache = project.cache.read().expect("Failed to read cache");
+
+        if let Some(doc) = &cache.document {
+            // 创建 CompileCommand
+
+            let options = PdfOptions {
+                ident: Smart::Auto,
+                timestamp: convert_datetime(Utc::now()),
+                page_ranges: None,
+                standards:  PdfStandards::new(&[PdfStandard::A_2b, PdfStandard::V_1_7]).unwrap(),
+            };
+
+            // 生成 PDF
+            let buffer = typst_pdf::pdf(doc, &options).map_err(|e| Error::Unknown)?;
+
+            // 写入 PDF 文件
+            fs::write(&path_buf, &buffer)?;
+
+            info!("PDF successfully exported to {}", path_buf.display());
+            return Ok(buffer.len() as u64);
+        } else {
+            return Err(Error::UnknownProject);
+        }
+    } else {
+        return Err(Error::UnknownProject);
+    }
 }
 
 /// Reads raw bytes from a specified path.
@@ -67,7 +105,7 @@ pub async fn fs_read_file_binary<R: Runtime>(
     window: Window<R>,
     project_manager: State<'_, Arc<ProjectManager<R>>>,
     path: PathBuf,
-) -> Result<Vec<u8>> {
+) -> std::result::Result<Vec<u8>, Error> {
     let (_, path) = project_path(&window, &project_manager, path)?;
     fs::read(path).map_err(Into::into)
 }
@@ -77,7 +115,7 @@ pub async fn fs_read_file_text<R: Runtime>(
     window: Window<R>,
     project_manager: State<'_, Arc<ProjectManager<R>>>,
     path: PathBuf,
-) -> Result<String> {
+) -> std::result::Result<String, Error> {
     if path.is_absolute() {
         return fs::read_to_string(path).map_err(Into::into);
     }
@@ -90,7 +128,7 @@ pub async fn fs_create_file<R: Runtime>(
     window: Window<R>,
     project_manager: State<'_, Arc<ProjectManager<R>>>,
     path: PathBuf,
-) -> Result<()> {
+) -> std::result::Result<(), Error> {
     let (_, path) = project_path(&window, &project_manager, path)?;
 
     // Not sure if there's a scenario where this condition is not met
@@ -104,6 +142,7 @@ pub async fn fs_create_file<R: Runtime>(
         .create_new(true)
         .open(&*path)
         .map_err(Into::<Error>::into)?;
+
     Ok(())
 }
 
@@ -113,7 +152,7 @@ pub async fn fs_write_file_binary<R: Runtime>(
     project_manager: State<'_, Arc<ProjectManager<R>>>,
     path: PathBuf,
     content: Vec<u8>,
-) -> Result<()> {
+) -> std::result::Result<(), Error> {
     let (_, path) = project_path(&window, &project_manager, path)?;
     fs::write(path, content).map_err(Into::into)
 }
@@ -124,7 +163,7 @@ pub async fn fs_write_file_text<R: Runtime>(
     project_manager: State<'_, Arc<ProjectManager<R>>>,
     path: PathBuf,
     content: String,
-) -> Result<()> {
+) -> std::result::Result<(), Error> {
     let (project, absolute_path) = project_path(&window, &project_manager, &path)?;
     let _ = File::create(absolute_path)
         .map(|mut f| f.write_all(content.as_bytes()))
@@ -142,7 +181,7 @@ pub async fn fs_list_dir<R: Runtime>(
     window: Window<R>,
     project_manager: State<'_, Arc<ProjectManager<R>>>,
     path: PathBuf,
-) -> Result<Vec<FileItem>> {
+) -> std::result::Result<Vec<FileItem>, Error> {
     let (_, path) = project_path(&window, &project_manager, path)?;
     let list = fs::read_dir(path).map_err(Into::<Error>::into)?;
 

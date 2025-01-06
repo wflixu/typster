@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api";
+import { invoke } from "@tauri-apps/api/core";
 
 export interface TypstRenderResponse {
   image: string;
@@ -61,15 +61,4 @@ export interface TypstCompleteResponse {
   completions: TypstCompletion[];
 }
 
-export const autocomplete = (
-  path: string,
-  content: string,
-  offset: number,
-  explicit: boolean
-): Promise<TypstCompleteResponse> =>
-  invoke<TypstCompleteResponse>("typst_autocomplete", {
-    path,
-    content,
-    offset,
-    explicit,
-  });
+

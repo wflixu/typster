@@ -19,7 +19,7 @@
 
 <script setup lang="ts">
 import { reactive, ref } from 'vue';
-import { open as openDialog } from '@tauri-apps/api/dialog';
+import { open as openDialog } from '@tauri-apps/plugin-dialog';
 import { appDataDir } from '@tauri-apps/api/path';
 import { message } from 'ant-design-vue';
 import { IProject } from './interface';

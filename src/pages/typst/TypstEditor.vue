@@ -69,8 +69,9 @@
 
 <script setup lang="ts">
 import { onMounted, ref, computed } from 'vue';
-import { readTextFile } from '@tauri-apps/api/fs';
-import { invoke } from "@tauri-apps/api";
+// @ts-ignore
+import { readTextFile } from '@tauri-apps/plugin-fs';
+import { invoke } from "@tauri-apps/api/core";
 import { EditOutlined, ReadOutlined, OneToOneOutlined, ExportOutlined } from '@ant-design/icons-vue'
 import type { IAdjust, IMode, TypstCompileResult, TypstPage, TypstSourceDiagnostic } from './interface';
 import { useSystemStoreHook } from '../../store/store';
@@ -78,12 +79,14 @@ import SidebarToggle from '../home/SidebarToggle.vue';
 import MonacoEditor from './../../components/MonacoEditor.vue'
 import PreviewPage from "./PreviewPage.vue"
 import DiagnosticsTip from './DiagnosticsTip.vue'
-
-import { save } from '@tauri-apps/api/dialog';
+// @ts-ignore
+import { save } from '@tauri-apps/plugin-dialog';
 import ViewScale from './ViewScale.vue'
 import { useWinMove } from "./../../shared/move-hook"
+// @ts-ignore
+import { getCurrentWindow } from '@tauri-apps/api/window';
 
-import { appWindow } from '@tauri-apps/api/window';
+const appWindow = getCurrentWindow()
 
 const { mousedownHandler,
     mouseupHandler,

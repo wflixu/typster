@@ -32,7 +32,7 @@ import type { IProject } from './interface';
 import { useSystemStoreHook } from '../../store/store';
 import AddProject from './AddProject.vue'
 import { useRouter } from 'vue-router';
-import { invoke } from '@tauri-apps/api';
+import { invoke } from '@tauri-apps/api/core';
 
 const systemStore = useSystemStoreHook();
 const router = useRouter()

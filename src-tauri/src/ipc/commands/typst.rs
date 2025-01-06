@@ -17,7 +17,6 @@ use std::sync::Arc;
 use std::time::Instant;
 use tauri::Runtime;
 use typst::diag::Severity;
-use typst::eval::Tracer;
 use typst::visualize::Color;
 use typst::World;
 use typst_ide::{Completion, CompletionKind};
@@ -64,7 +63,7 @@ impl From<Completion> for TypstCompletion {
         }
     }
 }
-
+// todo delete
 #[tauri::command]
 pub async fn typst_slot_update<R: Runtime>(
     window: tauri::Window<R>,
@@ -88,14 +87,15 @@ pub async fn typst_compile_doc<R: Runtime>(
     path: PathBuf,
     content: String,
 ) -> Result<(Vec<TypstPage>, Vec<TypstSourceDiagnostic>)> {
-    let project = project(&window, &project_manager)?;
 
+    let project = project(&window, &project_manager)?;
     let mut world = project.world.lock().unwrap();
     let source_id = world
         .slot_update(&path, Some(content.clone()))
         .map_err(Into::<Error>::into)?;
 
     if !world.is_main_set() {
+        
         let config = project.config.read().unwrap();
         if config.apply_main(&project, &mut world).is_err() {
             debug!("skipped compilation for {:?} (main not set)", project);
@@ -103,12 +103,11 @@ pub async fn typst_compile_doc<R: Runtime>(
         }
     }
 
-    debug!("compiling {:?}: {:?}", path, project);
     let now = Instant::now();
-    let mut tracer = Tracer::new();
+
     let mut pages: Vec<TypstPage> = Vec::new();
     let mut diags: Vec<TypstSourceDiagnostic> = Vec::new();
-    match typst::compile(&*world, &mut tracer) {
+    match typst::compile(&*world).output {
         Ok(doc) => {
             let elapsed = now.elapsed();
             debug!(
@@ -164,13 +163,12 @@ pub async fn typst_compile_doc<R: Runtime>(
             };
 
             diags = diagnostics.clone();
-
-            info!("############## {:?}", &diags);
         }
     }
 
     Ok((pages, diags))
 }
+
 
 pub fn get_range_position(text: &str, rang: Range<usize>) -> (usize, usize) {
     let mut ln = 0;
@@ -216,7 +214,7 @@ pub async fn typst_render<R: Runtime>(
     {
         let now = Instant::now();
 
-        let bmp = typst_render::render(&p.frame, scale, Color::WHITE);
+        let bmp = typst_render::render(p, scale);
         if let Ok(image) = bmp.encode_png() {
             let elapsed = now.elapsed();
             debug!(
@@ -233,7 +231,6 @@ pub async fn typst_render<R: Runtime>(
             });
         }
     }
-    info!("-----------pages");
 
     Err(Error::Unknown)
 }

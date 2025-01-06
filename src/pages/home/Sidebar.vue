@@ -48,11 +48,14 @@
 import type { TreeProps } from 'ant-design-vue';
 import { ref, h, reactive, onMounted, computed } from 'vue';
 import { PlusOutlined, FolderOpenOutlined } from '@ant-design/icons-vue'
-import { readDir, FileEntry, writeTextFile, removeFile, renameFile } from '@tauri-apps/api/fs';
+// @ts-ignore
+import { readDir, FileEntry, writeTextFile, remove, rename } from '@tauri-apps/plugin-fs';
 import { useSystemStoreHook } from '../../store/store';
 import { DataNode } from 'ant-design-vue/es/tree';
 import SidebarToggle from './SidebarToggle.vue';
-import { save , } from '@tauri-apps/api/dialog';
+// @ts-ignore
+import { save } from '@tauri-apps/plugin-dialog';
+import { join } from '@tauri-apps/api/path';
 
 const systemStore = useSystemStoreHook();
 
@@ -79,27 +82,27 @@ const initFiles = async () => {
     key: curProject.path,
     selectable: false,
     children: []
-  }
+  } as DataNode;
 
 
   // Reads the `$APPDATA/users` directory recursively
-  const entries = await readDir(root.key, { recursive: true });
+  const entries = await readDir(root.key as string);
 
-  function processEntries(entries: FileEntry[], parent: DataNode) {
+  async function processEntries(entries: FileEntry[], parent: DataNode) {
     for (const entry of entries) {
       if (entry.name?.endsWith('.DS_Store')) {
         continue;
       }
-      const node = { title: entry.path.split('/').pop(), key: entry.path, children: [], selectable: true };
-      if (entry.children) {
+      const node = { title: entry.name, key: await join(parent.key as string,  entry.name),  children: [], selectable: true } as DataNode;
+      if (entry.isDirectory) {
         node.selectable = false;
-        
-        processEntries(entry.children, node)
+        node.isLeaf = false
+       await  processEntries(await readDir(node.key as string), node)
       }
       parent.children?.push(node)
     }
   }
-  processEntries(entries, root)
+  await processEntries(entries, root)
   treeData.push(root)
 
   if (systemStore.editingFilePath) {
@@ -116,7 +119,7 @@ const onContextMenuClick = async (treeKey: string, menuKey: string | number) => 
       alert('The main.typ file cannot be deleted')
       return
     }
-    await removeFile(treeKey);
+    await remove(treeKey);
   }
   if (menuKey == 'rename' && treeKey) {
     const filePath = await save({
@@ -128,7 +131,7 @@ const onContextMenuClick = async (treeKey: string, menuKey: string | number) => 
       defaultPath: treeKey
     });
     if (filePath) {
-      await renameFile(treeKey, filePath);
+      await rename(treeKey, filePath);
     }
   }
   await initFiles();
@@ -143,14 +146,14 @@ const onCreateFile = async () => {
     title: "新建文件",
     filters: [{
       name: 'untitled',
-      extensions: ['typ', 'bib', 'yml']
+      extensions: ['typ', 'bib', 'yml', 'yaml']
     }],
     defaultPath: systemStore.editingProject?.path
 
   });
   console.warn(filePath)
   if (filePath) {
-    await writeTextFile({ path: filePath, contents: ' ' });
+    await writeTextFile(filePath , ' ' );
     await initFiles();
   }
 }

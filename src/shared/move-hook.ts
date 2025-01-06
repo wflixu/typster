@@ -1,5 +1,6 @@
-import { LogicalPosition, appWindow } from "@tauri-apps/api/window";
+import { LogicalPosition, getCurrentWindow } from "@tauri-apps/api/window";
 import { ref } from "vue";
+const appWindow = getCurrentWindow()
 
 export function useWinMove() {
   const moving = ref(false);
