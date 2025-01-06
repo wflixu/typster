@@ -49,7 +49,6 @@ notify = "6.1"
 comemo = "0.4.0"
 chrono = { version = "0.4.24", default-features = false, features = ["clock", "std", "serde"] }
 dirs = "5.0"
-walkdir = "2.5"
 memmap2 = "0.9"
 once_cell = "1.19"
 
@@ -69,3 +68,9 @@ native-tls = "0.2"
 env_proxy = "0.4"
 flate2 = "1"
 tar = "0.4"
+
+[profile.dev]
+incremental = true
+
+[profile.release]
+incremental = true
