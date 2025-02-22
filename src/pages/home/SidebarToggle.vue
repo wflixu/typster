@@ -1,20 +1,17 @@
 <template>
-    <div class="sidebar-toggle ">
-        <a-button size="small" type="link" @click="back" :icon="h(AppstoreOutlined)">
-        </a-button>
-        <a-button size="small" type="link" @click="onToggle">
-            <template #icon>
-                <DoubleLeftOutlined v-if="systemStore.showSidebar" key="left" />
-                <DoubleRightOutlined v-else key="right" />
-            </template>
-        </a-button>
+    <div class="sidebar-toggle">
+        <Button size="small" variant="text" @click="back" icon="pi pi-th-large">
+        </Button>
+        <Button size="small" variant="text" @click="onToggle" :icon="toggleIcon">
+           
+        </Button>
     </div>
 </template>
 
 <script setup lang="ts">
-import { DoubleLeftOutlined, DoubleRightOutlined, AppstoreOutlined } from '@ant-design/icons-vue'
+
 import { useRouter } from 'vue-router';
-import { h } from 'vue';
+import { computed } from 'vue';
 import { useSystemStoreHook } from '../../store/store';
 
 const systemStore = useSystemStoreHook();
@@ -25,6 +22,9 @@ const back = () => {
     router.push('/project')
 
 }
+const toggleIcon = computed(() => {
+    return systemStore.showSidebar ? 'pi pi-angle-double-left' : 'pi pi-angle-double-right';
+})
 
 const onToggle = () => {
    systemStore.toggleShowSidebar()

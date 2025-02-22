@@ -3,15 +3,17 @@
         <h1> Projects</h1>
         <div class="content">
             <div v-if="isEmpty">
-                <a-empty description="没有项目"/>
+                <Card>
+                    没有项目 
+                </Card>
             </div>
             <ul class="list">
                 <li class="list-item" v-for="project in list" :key="project.title" @click="onSelect(project)">
                     <h2>{{ project.title }}</h2>
                     <p> {{ project.path }}</p>
                     <div class="actions">
-                        <a-button @click.stop="onDeleteProject(project)" size="small" shape="circle"
-                            :icon="h(DeleteOutlined)" />
+                        <Button @click.stop="onDeleteProject(project)" size="small" shape="circle"
+                            icon="pi pi-trash" />
                     </div>
                 </li>
 
@@ -19,7 +21,7 @@
         </div>
 
         <div class="footer">
-            <a-button @click="addProject" block size="large" type="primary"> Add Project </a-button>
+            <Button @click="addProject" block size="large" severity="success"> Add Project </Button>
         </div>
         <AddProject v-model:open="show" @finish="onFinish" />
     </div>

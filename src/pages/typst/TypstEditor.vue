@@ -5,34 +5,17 @@
             @mouseleave="mouseleaveHandler">
             <div class="left">
                 <SidebarToggle v-if="!systemStore.showSidebar" class="toggle" />
-                <!-- <a-button size="small" >
-                    <template #icon>
-                        <a-tooltip title="保存">
-                            <SaveOutlined />
-                        </a-tooltip>
-                    </template>
-</a-button> -->
-                <a-button size="small" @click="exportPdf">
-                    <template #icon>
-                        <a-tooltip title="导出PDF">
-                            <ExportOutlined />
-                        </a-tooltip>
-                    </template>
-                </a-button>
-                <!-- <a-button @click="onTest">test</a-button> -->
+
+                <Button size="small" text @click="exportPdf" icon="pi pi-file-pdf">
+                </Button>
             </div>
             <div class="middle">
-                <a-radio-group v-model:value="mode" button-style="solid" size="small">
-                    <a-radio-button value="all">
-                        <OneToOneOutlined />
-                    </a-radio-button>
-                    <a-radio-button value="edit">
-                        <EditOutlined />
-                    </a-radio-button>
-                    <a-radio-button value="preview">
-                        <ReadOutlined />
-                    </a-radio-button>
-                </a-radio-group>
+                <SelectButton v-model="mode" :options="buttonOptions"  option-value="value" dataKey="value"
+                    aria-labelledby="custom">
+                    <template #option="slotProps">
+                        <i :class="slotProps.option.icon"></i>
+                    </template>
+                </SelectButton>
             </div>
             <div class="right">
                 <ViewScale v-model="scale" />
@@ -103,13 +86,19 @@ const toggleWindowMax = async (event: MouseEvent) => {
 
 }
 const systemStore = useSystemStoreHook();
-const mode = ref<IMode>(systemStore.mode);
+const mode = ref<IMode>(systemStore.mode ?? 'all');
 const pages = ref<TypstPage[]>([])
 const diags = ref<TypstSourceDiagnostic[]>([])
 const scale = ref(1);
 
-const diagnostic = computed<TypstSourceDiagnostic|null>(()=>{
-    
+const buttonOptions = [
+    { value: 'all', icon: 'pi pi-th-large' },
+    { value: 'edit', icon: 'pi pi-pencil' },
+    { value: 'preview', icon: 'pi pi-eye' }
+]
+
+const diagnostic = computed<TypstSourceDiagnostic | null>(() => {
+
     return diags.value.shift() ?? null;
 })
 
@@ -141,7 +130,7 @@ const compile_main_file = async () => {
     try {
         const content = await readTextFile(mainpath);
         const [res, diags] = await invoke<TypstCompileResult>("typst_compile_doc", { path: '/main.typ', content });
-        console.warn(res,diags)
+        console.warn(res, diags)
         if (Array.isArray(res)) {
             pages.value = res;
         }

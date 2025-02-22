@@ -1,18 +1,14 @@
 <template>
     <div class="view-scale">
-        <a-button size="small" @click="onChange('-')">
-            <template #icon>
-                <MinusOutlined />
-            </template>
-        </a-button>
+        <Button size="small" @click="onChange('-')" icon="pi pi-minus">
+           
+        </Button>
         <span>
             {{ showText }}
         </span>
-        <a-button size="small" @click="onChange('+')">
-            <template #icon>
-                <PlusOutlined />
-            </template>
-        </a-button>
+        <Button size="small" @click="onChange('+')" icon="pi pi-plus">
+            
+        </Button>
     </div>
 </template>
 

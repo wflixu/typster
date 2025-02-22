@@ -5,66 +5,69 @@
       <span>
         Files
       </span>
-      <a-button :icon="h(PlusOutlined)" @click="onCreateFile"></a-button>
+      <Button icon="pi pi-plus" aria-label="Save" size="small" @click="onCreateFile" />
+
     </div>
-    <a-directory-tree class="dir" :blockNode="true" v-model:expandedKeys="expandedKeys"
-      v-model:selectedKeys="selectedKeys" :tree-data="treeData" @select="onSelect">
-      <template #title="{ key: treeKey, title }">
-        <a-dropdown :trigger="['contextmenu']">
-          <span>{{ title }}</span>
-          <template #overlay>
-            <a-menu @click="({ key: menuKey }: any) => onContextMenuClick(treeKey, menuKey)">
-              <a-menu-item key="delete">删除</a-menu-item>
-              <a-menu-item key="rename">重命名</a-menu-item>
-            </a-menu>
-          </template>
-        </a-dropdown>
+    <ContextMenu ref="menuRef" :model="items" />
+    <Tree class="dir" v-model:selectionKeys="selectedKeys" selectionMode="single" :value="treeData"
+      @nodeSelect="onSelect">
+      <template #default="{ node }">
+        <div @contextmenu="onRightClick($event, node)">
+          <span>{{ node.label }}</span>
+        </div>
       </template>
-    </a-directory-tree>
+    </Tree>
 
     <div class="footer">
-      <a-dropdown trigger="click">
-        <div class="hover">
-          <FolderOpenOutlined />
-          <span class="ml-2">
-            {{ systemStore.editingProject?.path }}
-          </span>
-        </div>
-
-        <template #overlay>
-          <a-menu @select="onSelectProject" selectable>
-            <a-menu-item v-for="pro in projects" :key="pro.path">
-              <span>{{ pro.title }}</span> : <span>{{ pro.path }}</span>
-            </a-menu-item>
-          </a-menu>
-        </template>
-      </a-dropdown>
-
+      <Select :value="systemStore.editingProject?.path" :options="projects" optionLabel="title" option-value="path" 
+        class="w-full md:w-56" @change="onSelectProject" />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import type { TreeProps } from 'ant-design-vue';
-import { ref, h, reactive, onMounted, computed } from 'vue';
-import { PlusOutlined, FolderOpenOutlined } from '@ant-design/icons-vue'
+import { ref, reactive, onMounted, computed } from 'vue';
+import Button from 'primevue/button';
+
 // @ts-ignore
 import { readDir, FileEntry, writeTextFile, remove, rename } from '@tauri-apps/plugin-fs';
 import { useSystemStoreHook } from '../../store/store';
-import { DataNode } from 'ant-design-vue/es/tree';
 import SidebarToggle from './SidebarToggle.vue';
 // @ts-ignore
 import { save } from '@tauri-apps/plugin-dialog';
 import { join } from '@tauri-apps/api/path';
+import { TreeNode } from 'primevue/treenode';
+
 
 const systemStore = useSystemStoreHook();
 
 const expandedKeys = ref<string[]>([]);
 const selectedKeys = ref<string[]>([]);
-const treeData: TreeProps['treeData'] = reactive([]);
+const treeData: TreeNode[] = reactive([]);
 
 const projects = computed(() => {
   return systemStore.projects;
+})
+
+const menuRef = ref();
+const items = ref([
+  {
+    label: 'Delect', icon: 'pi pi-trash', command: (e) => {
+      console.log(e)
+    }
+  },
+  { label: 'Rename', icon: 'pi pi-file-edit' }
+]);
+const onRightClick = (event, node) => {
+  console.log(node, event, menuRef.value)
+  menuRef.value?.show();
+}
+
+const projectItems = projects.value.map(item => {
+  return {
+    name: item.title,
+    code: item.path
+  }
 })
 
 const initFiles = async () => {
@@ -78,11 +81,13 @@ const initFiles = async () => {
   }
 
   const root = {
-    title: curProject.path.split('/').pop(),
+    label: curProject.path.split('/').pop(),
+    data: curProject.path.split('/').pop(),
     key: curProject.path,
     selectable: false,
+    icon: 'pi pi-folder',
     children: []
-  } as DataNode;
+  } as TreeNode;
 
 
   // Reads the `$APPDATA/users` directory recursively
@@ -93,11 +98,16 @@ const initFiles = async () => {
       if (entry.name?.endsWith('.DS_Store')) {
         continue;
       }
-      const node = { title: entry.name, key: await join(parent.key as string,  entry.name),  children: [], selectable: true } as DataNode;
+      const node = {
+        label: entry.name,
+        icon: 'pi pi-file',
+        key: await join(parent.key as string, entry.name), children: [], selectable: true
+      } as DataNode;
       if (entry.isDirectory) {
         node.selectable = false;
-        node.isLeaf = false
-       await  processEntries(await readDir(node.key as string), node)
+        node.leaf = false
+        node.icon = 'pi pi-folder'
+        await processEntries(await readDir(node.key as string), node)
       }
       parent.children?.push(node)
     }
@@ -137,9 +147,9 @@ const onContextMenuClick = async (treeKey: string, menuKey: string | number) => 
   await initFiles();
 };
 
-const onSelect = (selectedKeys: string[]) => {
-  console.log(selectedKeys)
-  systemStore.setEditingFilePath(selectedKeys[0])
+const onSelect = (node: TreeNode) => {
+
+  systemStore.setEditingFilePath(node.key as string)
 }
 const onCreateFile = async () => {
   const filePath = await save({
@@ -153,13 +163,13 @@ const onCreateFile = async () => {
   });
   console.warn(filePath)
   if (filePath) {
-    await writeTextFile(filePath , ' ' );
+    await writeTextFile(filePath, ' ');
     await initFiles();
   }
 }
 
 const onSelectProject = ({ key }: any) => {
-
+  
   let selectedProject = systemStore.projects.find(item => item.path == key)
   if (selectedProject) {
     systemStore.selectProject(selectedProject)

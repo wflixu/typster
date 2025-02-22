@@ -1,10 +1,13 @@
 <template>
     <div class="page-loading">
-        <a-spin size="large" />
+        <ProgressSpinner />
     </div>
 </template>
 
 <script setup lang="ts">
+
+import ProgressSpinner from 'primevue/progressspinner';
+
 
 </script>
 
