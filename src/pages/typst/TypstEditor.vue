@@ -10,7 +10,7 @@
                 </Button>
             </div>
             <div class="middle">
-                <SelectButton v-model="mode" :options="buttonOptions"  option-value="value" dataKey="value"
+                <SelectButton v-model="mode" :options="buttonOptions" option-value="value" dataKey="value"
                     aria-labelledby="custom">
                     <template #option="slotProps">
                         <i :class="slotProps.option.icon"></i>
@@ -55,7 +55,6 @@ import { onMounted, ref, computed } from 'vue';
 // @ts-ignore
 import { readTextFile } from '@tauri-apps/plugin-fs';
 import { invoke } from "@tauri-apps/api/core";
-import { EditOutlined, ReadOutlined, OneToOneOutlined, ExportOutlined } from '@ant-design/icons-vue'
 import type { IAdjust, IMode, TypstCompileResult, TypstPage, TypstSourceDiagnostic } from './interface';
 import { useSystemStoreHook } from '../../store/store';
 import SidebarToggle from '../home/SidebarToggle.vue';
@@ -98,7 +97,6 @@ const buttonOptions = [
 ]
 
 const diagnostic = computed<TypstSourceDiagnostic | null>(() => {
-
     return diags.value.shift() ?? null;
 })
 
@@ -121,9 +119,6 @@ const exportPdf = async () => {
     });
     const res = await invoke('export_pdf', { path: filePath })
 }
-
-
-
 
 const compile_main_file = async () => {
     const mainpath = systemStore.editingProject?.path + '/main.typ';

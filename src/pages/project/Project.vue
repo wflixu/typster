@@ -29,7 +29,6 @@
 
 <script setup lang="ts">
 import { onMounted, ref, h, computed } from 'vue';
-import { DeleteOutlined } from '@ant-design/icons-vue'
 import type { IProject } from './interface';
 import { useSystemStoreHook } from '../../store/store';
 import AddProject from './AddProject.vue'

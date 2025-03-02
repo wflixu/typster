@@ -1,0 +1,58 @@
+# typst-cli 默认参数配置文件
+
+[compile]
+input = "input.typ"  # 输入文件路径
+output = "output.pdf"  # 输出文件路径
+format = "pdf"  # 输出格式
+pages = ["1-"]  # 导出页面范围
+pdf_standard = ["1.7"]  # PDF 标准
+ppi = 144.0  # PNG 导出的 PPI
+make_deps = "Makefile"  # Makefile 路径
+open = false  # 是否在编译后打开输出文件
+timings = "timings.json"  # 性能计时输出文件路径
+
+[compile.world]
+root = "."  # 项目根目录
+inputs = ["key=value"]  # 输入键值对
+font.font_paths = ["./fonts"]  # 字体路径
+font.ignore_system_fonts = false  # 是否忽略系统字体
+package.package_path = "./packages"  # 本地包路径
+package.package_cache_path = "./cache"  # 包缓存路径
+creation_timestamp = ""  # 文档创建时间戳
+
+[compile.process]
+jobs = 4  # 并行作业数
+features = ["html"]  # 启用的特性
+diagnostic_format = "short"  # 诊断信息格式
+
+[init]
+template = "default"  # 模板名称
+dir = "new_project"  # 项目目录
+package.package_path = "./packages"  # 本地包路径
+package.package_cache_path = "./cache"  # 包缓存路径
+
+[query]
+input = "input.typ"  # 输入文件路径
+selector = "title"  # 选择器
+field = "text"  # 字段
+one = true  # 是否只提取一个元素
+format = "json"  # 输出格式
+pretty = true  # 是否美化输出
+
+[query.world]
+root = "."  # 项目根目录
+inputs = ["key=value"]  # 输入键值对
+font.font_paths = ["./fonts"]  # 字体路径
+font.ignore_system_fonts = false  # 是否忽略系统字体
+package.package_path = "./packages"  # 本地包路径
+package.package_cache_path = "./cache"  # 包缓存路径
+creation_timestamp = 1672531199  # 文档创建时间戳
+
+[query.process]
+jobs = 4  # 并行作业数
+features = ["html"]  # 启用的特性
+diagnostic_format = "short"  # 诊断信息格式
+
+[fonts]
+font_paths = ["./fonts"]  # 字体路径
+ignore_system_fonts = false  # 是否忽略系统字体
