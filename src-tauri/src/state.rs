@@ -35,4 +35,18 @@ impl<R: Runtime> AppState<R> {
             }
         };
     }
+    pub fn load_world_from_path(&self, path: &PathBuf, window: &Window<R>) -> bool {
+        match SystemWorld::load_from_path(path) {
+            Ok(world) => {
+                self.set_world(window, Some(Arc::new(world)));
+                info!("load_world_from_path succes");
+                true
+            }
+            Err(e) => {
+                info!("load_world_from_path succes");
+                error!("Failed to load world from path: {:?}", e);
+                false
+            }
+        }
+    }
 }

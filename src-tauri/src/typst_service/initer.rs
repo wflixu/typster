@@ -1,17 +1,15 @@
-use std::io::Write;
+use std::io::{StdoutLock, Write};
 use std::path::Path;
 
 use codespan_reporting::term::termcolor::{Color, ColorSpec, WriteColor};
 use ecow::eco_format;
 use fs_extra::dir::CopyOptions;
 use typst::diag::{bail, FileError, StrResult};
-use typst::syntax::package::{
-    PackageManifest, PackageSpec, TemplateInfo, VersionlessPackageSpec,
-};
+use typst::syntax::package::{PackageManifest, PackageSpec, TemplateInfo, VersionlessPackageSpec};
 
 use super::args::InitArgs;
-use super::download::PrintDownload;
 use super::package;
+use super::package::PrintDownload;
 
 /// Execute an initialization command.
 pub fn init(args: InitArgs) -> StrResult<()> {
@@ -29,8 +27,7 @@ pub fn init(args: InitArgs) -> StrResult<()> {
     })?;
 
     // Find or download the package.
-    let package_path =
-        package_storage.prepare_package(&spec, &mut PrintDownload(&spec))?;
+    let package_path = package_storage.prepare_package(&spec, &mut PrintDownload(&spec))?;
 
     // Parse the manifest.
     let manifest = parse_manifest(&package_path)?;
@@ -75,12 +72,18 @@ fn scaffold_project(
     template: &TemplateInfo,
 ) -> StrResult<()> {
     if project_dir.exists() {
-        bail!("project directory already exists (at {})", project_dir.display());
+        bail!(
+            "project directory already exists (at {})",
+            project_dir.display()
+        );
     }
 
     let template_dir = package_path.join(template.path.as_str());
     if !template_dir.exists() {
-        bail!("template directory does not exist (at {})", template_dir.display());
+        bail!(
+            "template directory does not exist (at {})",
+            template_dir.display()
+        );
     }
 
     fs_extra::dir::copy(
@@ -103,25 +106,14 @@ fn print_summary(
     gray.set_fg(Some(Color::White));
     gray.set_dimmed(true);
 
-    let mut out = crate::terminal::out();
+    let out = std::io::stdout();
+    let mut out = out.lock();
     writeln!(out, "Successfully created new project from {spec} 🎉")?;
     writeln!(out, "To start writing, run:")?;
-    out.set_color(&gray)?;
     write!(out, "> ")?;
-    out.reset()?;
-    writeln!(
-        out,
-        "cd {}",
-        shell_escape::escape(project_dir.display().to_string().into()),
-    )?;
-    out.set_color(&gray)?;
+    writeln!(out, "cd {}", project_dir.display().to_string())?;
     write!(out, "> ")?;
-    out.reset()?;
-    writeln!(
-        out,
-        "typst watch {}",
-        shell_escape::escape(template.entrypoint.to_string().into()),
-    )?;
+    writeln!(out, "typst watch {}", template.entrypoint.to_string())?;
     writeln!(out)?;
     Ok(())
 }

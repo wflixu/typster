@@ -14,7 +14,7 @@ use typst::utils::format_duration;
 
 // 删除无效的 use 语句
 // use super::args::Output;
-use super::compile::CompileConfig;
+use super::compiler::CompileConfig;
 use super::timings::Timer;
 use super::world::{SystemWorld, WorldCreationError};
 

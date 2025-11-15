@@ -1,0 +1,43 @@
+cert = "cert.pem"
+
+[compiler]
+input = "input.typ"
+output = "output.pdf"
+format = "pdf"
+pages = ["1-"]
+pdf_standard = ["1.7"]
+ppi = 144.0
+make_deps = "Makefile"
+open = false
+timings = "timings.json"
+optimize = true
+
+[world]
+root = "."
+inputs = ["key=value"]
+creation_timestamp = ""
+
+[package]
+package_path = "./packages"
+package_cache_path = "./cache"
+
+[init]
+template = "default"
+dir = "new_project"
+
+[query]
+input = "input.typ"
+selector = "title"
+field = "text"
+one = true
+format = "json"
+pretty = true
+
+[process]
+jobs = 4
+features = ["html"]
+diagnostic_format = "short"
+
+[fonts]
+font_paths = ["./fonts"]
+ignore_system_fonts = false

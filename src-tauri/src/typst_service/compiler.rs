@@ -271,8 +271,9 @@ fn export_image(
         })
         .collect::<Vec<_>>();
 
-    if !ca_handle_multiple && exported_pages.len() > 1 {
-        bail!("cannot export multiple images without a page number template ({p}, {0p}) in the output path");
+    if !can_handle_multiple && exported_pages.len() > 1 {
+        let err = "without a page number template ({p}, {0p}) in the output path";
+        bail!("cannot export multiple images {}", err);
     }
 
     // The results are collected in a `Vec<()>` which does not allocate.
@@ -292,16 +293,6 @@ fn export_image(
                 } else {
                     &config.output
                 };
-
-                // If we are not watching, don't use the cache.
-                // If the frame is in the cache, skip it.
-                // If the file does not exist, always create it.
-                if config.watching
-                    && config.export_cache.is_cached(*i, &page.frame)
-                    && path.exists()
-                {
-                    return Ok(path.to_path_buf());
-                }
 
                 path.to_owned()
             };
@@ -439,7 +430,7 @@ fn write_make_deps(
         let relative_root = diff_paths(&root, &current_dir).unwrap_or(root.clone());
 
         for (i, output_path) in output_paths.into_iter().enumerate() {
-            if i = 0 {
+            if i != 0 {
                 file.write_all(b" ")?;
             }
             file.write_all(munge(&output_path).as_bytes())?;
@@ -540,7 +531,7 @@ pub fn print_diagnostics(
         )
         .with_labels(label(world, diagnostic.span).into_iter().collect());
 
-        term::emit(&mut terminal::out(), &config, world, &diag)?;
+        // term::emit(&mut terminal::out(), &config, world, &diag)?;
 
         // Stacktrace-like helper diagnostics.
         for point in &diagnostic.trace {
@@ -549,7 +540,7 @@ pub fn print_diagnostics(
                 .with_message(message)
                 .with_labels(label(world, point.span).into_iter().collect());
 
-            term::emit(&mut terminal::out(), &config, world, &help)?;
+            // term::emit(&mut terminal::out(), &config, world, &help)?;
         }
     }
 
@@ -616,5 +607,34 @@ impl<'a> codespan_reporting::files::Files<'a> for SystemWorld {
                 CodespanError::IndexTooLarge { given, max }
             }
         })
+    }
+}
+
+mod output_template {
+    const INDEXABLE: [&str; 3] = ["{p}", "{0p}", "{n}"];
+
+    pub fn has_indexable_template(output: &str) -> bool {
+        INDEXABLE.iter().any(|template| output.contains(template))
+    }
+
+    pub fn format(output: &str, this_page: usize, total_pages: usize) -> String {
+        // Find the base 10 width of number `i`
+        fn width(i: usize) -> usize {
+            1 + i.checked_ilog10().unwrap_or(0) as usize
+        }
+
+        let other_templates = ["{t}"];
+        INDEXABLE
+            .iter()
+            .chain(other_templates.iter())
+            .fold(output.to_string(), |out, template| {
+                let replacement = match *template {
+                    "{p}" => format!("{this_page}"),
+                    "{0p}" | "{n}" => format!("{:01$}", this_page, width(total_pages)),
+                    "{t}" => format!("{total_pages}"),
+                    _ => unreachable!("unhandled template placeholder {template}"),
+                };
+                out.replace(template, replacement.as_str())
+            })
     }
 }

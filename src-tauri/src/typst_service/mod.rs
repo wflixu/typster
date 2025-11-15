@@ -1,17 +1,17 @@
-mod service;
+mod config;
+mod config_tests;
 mod args;
-mod init;
-mod compile;
-mod query;
 mod world;
 mod package;
-mod timings;
-mod watch;
+// mod initer;
+// mod compiler;
+// mod query;
+// mod timings;
+// mod watch;
 
-pub use service::*;
 pub use args::*;
-pub use init::*;
-pub use compile::*; 
-pub use query::*;
 pub use world::*;
 pub use package::*;
+// pub use initer::*;
+// pub use compiler::*; 
+pub use config::*;

@@ -12,13 +12,14 @@ use typst::foundations::{Bytes, Datetime, Dict, IntoValue};
 use typst::syntax::{FileId, Source, VirtualPath};
 use typst::text::{Font, FontBook};
 use typst::utils::LazyHash;
-use typst::{Library, World};
+use typst::{Library, World, LibraryExt};
 use typst_kit::fonts::{FontSlot, Fonts};
 use typst_kit::package::PackageStorage;
 use typst_timing::timed;
 
+
 use super::args::{ProcessArgs, WorldArgs};
-use super::package;
+use super::{package, DiagnosticFormat, FontArgs, PackageArgs, PrintDownload};
 
 /// Static `FileId` allocated for stdin.
 /// This is to ensure that a file is read in the correct way.
@@ -136,6 +137,22 @@ impl SystemWorld {
             package_storage: package::storage(&world_args.package),
             now,
         })
+    }
+
+    /// Load a SystemWorld instance from a given path.
+    pub fn load_from_path(path: &PathBuf) -> Result<Self, WorldCreationError> {
+        use crate::config::ConfigLoader;
+
+        // 获取项目根目录（输入文件的父目录）
+        let project_root = path.parent();
+
+        // 加载配置
+        let loader = ConfigLoader::new();
+        let runtime_config = loader.load_config_with_fallback(project_root)
+            .map_err(|e| WorldCreationError::Io(std::io::Error::new(std::io::ErrorKind::Other, e.to_string())))?;
+
+        // 使用配置创建SystemWorld
+        SystemWorld::new(path, &runtime_config.world_args, &runtime_config.process_args)
     }
 
     /// The id of the main source file.
