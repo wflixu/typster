@@ -50,7 +50,7 @@ const onSelect = async (pr: IProject) => {
 
     systemStore.selectProject(pr);
     systemStore.setLoading(true);
-    await invoke('load_doc_from_path', { path: pr.path });
+    // await invoke('load_doc_from_path', { path: pr.path });
     systemStore.setLoading(false);
     router.push('/home')
 }

@@ -36,14 +36,13 @@ import SidebarToggle from './SidebarToggle.vue';
 // @ts-ignore
 import { save } from '@tauri-apps/plugin-dialog';
 import { join } from '@tauri-apps/api/path';
-import { TreeNode } from 'primevue/treenode';
 
 
 const systemStore = useSystemStoreHook();
 
 const expandedKeys = ref<string[]>([]);
 const selectedKeys = ref<string[]>([]);
-const treeData: TreeNode[] = reactive([]);
+const treeData: any[] = reactive([]);
 
 const projects = computed(() => {
   return systemStore.projects;

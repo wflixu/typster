@@ -2,10 +2,11 @@
 
 
 
-body,html {
+body,
+html {
   margin: 0;
   padding: 0;
-  font-family: system-ui, -apple-system, "Segoe UI", "Microsoft YaHei UI",  "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji", Roboto, Helvetica, Arial, sans-serif ;
+  font-family: system-ui, -apple-system, "Segoe UI", "Microsoft YaHei UI", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji", Roboto, Helvetica, Arial, sans-serif;
   color: var(--text-color)
 }
 
@@ -13,7 +14,14 @@ body,html {
   min-height: 100vh;
   position: relative;
 }
+
 .page {
   height: 100%;
 }
 
+.tiptap-editor>.tiptap {
+  outline: none;
+  min-height: 100%;
+  width: 100%;
+
+}

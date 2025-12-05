@@ -2,7 +2,16 @@
   "permissions": {
     "allow": [
       "Bash(cargo check:*)",
-      "Bash(cargo run:*)"
+      "Bash(cargo run:*)",
+      "Bash(tree:*)",
+      "Bash(pnpm install)",
+      "Bash(npm run build)",
+      "Bash(pnpm dev:*)",
+      "Bash(pnpm add:*)",
+      "Bash(lsof:*)",
+      "Bash(xargs kill:*)",
+      "Bash(pnpm run td:*)",
+      "Bash(pnpm install:*)"
     ],
     "deny": [],
     "ask": []

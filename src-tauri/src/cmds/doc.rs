@@ -2,31 +2,13 @@ use log::{info, warn};
 use std::{path::PathBuf, sync::Arc};
 use tauri::{Runtime, State, Window};
 
-use crate::cmds::{TypstPage, TypstSourceDiagnostic};
+use crate::cmds::model::{TypstPage, TypstSourceDiagnostic};
 use crate::config::ConfigLoader;
 // use crate::state::AppState;
 use crate::typst_service::SystemWorld;
 use crate::util::AppError;
 
-// Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
-#[tauri::command]
-pub fn greet2(name: &str) -> String {
-    // 测试配置系统集成
-    let loader = ConfigLoader::new();
 
-    // 尝试加载全局配置
-    match loader.load_config(None) {
-        Ok(runtime_config) => {
-            format!("Hello, {}! Configuration loaded successfully. Compiler input: {:?}, Output: {:?}",
-                   name,
-                   runtime_config.compile_args.input,
-                   runtime_config.compile_args.output)
-        }
-        Err(e) => {
-            format!("Hello, {}! Configuration error: {}", name, e)
-        }
-    }
-}
 
 #[tauri::command]
 pub async fn load_doc_from_path(path: String) -> Result<bool, AppError> {

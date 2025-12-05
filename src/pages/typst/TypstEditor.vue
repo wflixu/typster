@@ -1,229 +1,235 @@
 <template>
-    <div class="typster" :class="layoutcls">
-        <div class="actions" :class="{ 'expand': systemStore.showSidebar }" @dblclick="toggleWindowMax"
-            @mousedown="mousedownHandler" @mouseup="mouseupHandler" @mousemove="mousemoveHandler"
-            @mouseleave="mouseleaveHandler">
-            <div class="left">
-                <SidebarToggle v-if="!systemStore.showSidebar" class="toggle" />
-
-                <Button size="small" text @click="exportPdf" icon="pi pi-file-pdf">
-                </Button>
+    <div class="typst-wysiwyg-editor">
+        <!-- Typora-style Title Bar -->
+        <div class="title-bar">
+            <div class="title-bar-left">
+                <span class="document-title">Untitled</span>
             </div>
-            <div class="middle">
-                <SelectButton v-model="mode" :options="buttonOptions" option-value="value" dataKey="value"
-                    aria-labelledby="custom">
-                    <template #option="slotProps">
-                        <i :class="slotProps.option.icon"></i>
-                    </template>
-                </SelectButton>
-            </div>
-            <div class="right">
-                <ViewScale v-model="scale" />
-                <!-- <template v-if="mode == 'preview'">
-                    <a-radio-group v-model:value="adjust" button-style="solid" size="small">
-                        <a-radio-button value="full">
-                            <OneToOneOutlined />
-                        </a-radio-button>
-                        <a-radio-button value="width">
-                            <EditOutlined />
-                        </a-radio-button>
-                        <a-radio-button value="height">
-                            <ReadOutlined />
-                        </a-radio-button>
-                    </a-radio-group>
-                </template> -->
-            </div>
-        </div>
-        <div class="content">
-            <div class="source bbox" v-show="mode != 'preview'">
-                <MonacoEditor :path="systemStore.editingFilePath" :root="systemStore.editingProject?.path"
-                    @change="onChange" @compiled="onCompile">
-                </MonacoEditor>
-            </div>
-
-            <div class="result" v-show="mode != 'edit'" @wheel="onWhell">
-                <DiagnosticsTip :diagnostic="diagnostic" />
-                <PreviewPage v-for="page in pages" :key="page.hash" v-bind="page" :scale="scale" />
+            <div class="title-bar-right">
+                <button class="toolbar-button" @click="saveDocument">Save</button>
             </div>
         </div>
 
+        <!-- Main Editor Area -->
+        <div class="editor-container">
+            <!-- Tiptap Editor -->
+
+            <editor-content :editor="editor" class="tiptap-editor" />
+
+
+            <!-- Status Bar -->
+            <div class="status-bar">
+                <div class="status-left">
+                    <span class="word-count">{{ wordCount }} words</span>
+                    <span class="char-count">{{ charCount }} characters</span>
+                </div>
+                <div class="status-right">
+                    <span class="cursor-position">Line {{ cursorLine }}, Col {{ cursorCol }}</span>
+                </div>
+            </div>
+        </div>
     </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, computed } from 'vue';
-// @ts-ignore
-import { readTextFile } from '@tauri-apps/plugin-fs';
-import { invoke } from "@tauri-apps/api/core";
-import type { IAdjust, IMode, TypstCompileResult, TypstPage, TypstSourceDiagnostic } from './interface';
-import { useSystemStoreHook } from '../../store/store';
-import SidebarToggle from '../home/SidebarToggle.vue';
-import MonacoEditor from './../../components/MonacoEditor.vue'
-import PreviewPage from "./PreviewPage.vue"
-import DiagnosticsTip from './DiagnosticsTip.vue'
-// @ts-ignore
-import { save } from '@tauri-apps/plugin-dialog';
-import ViewScale from './ViewScale.vue'
-import { useWinMove } from "./../../shared/move-hook"
-// @ts-ignore
-import { getCurrentWindow } from '@tauri-apps/api/window';
+import { onMounted, onUnmounted, ref } from 'vue'
+import { useEditor, EditorContent } from '@tiptap/vue-3'
+import StarterKit from '@tiptap/starter-kit'
+import { Markdown } from '@tiptap/markdown'
 
-const appWindow = getCurrentWindow()
+// UI State
+const wordCount = ref(0)
+const charCount = ref(0)
+const cursorLine = ref(1)
+const cursorCol = ref(1)
 
-const { mousedownHandler,
-    mouseupHandler,
-    mousemoveHandler,
-    mouseleaveHandler } = useWinMove()
-
-
-const toggleWindowMax = async (event: MouseEvent) => {
-
-    if (event.target != event.currentTarget) {
-        return
-    }
-    await appWindow.toggleMaximize()
-
-}
-const systemStore = useSystemStoreHook();
-const mode = ref<IMode>(systemStore.mode ?? 'all');
-const pages = ref<TypstPage[]>([])
-const diags = ref<TypstSourceDiagnostic[]>([])
-const scale = ref(1);
-
-const buttonOptions = [
-    { value: 'all', icon: 'pi pi-th-large' },
-    { value: 'edit', icon: 'pi pi-pencil' },
-    { value: 'preview', icon: 'pi pi-eye' }
-]
-
-const diagnostic = computed<TypstSourceDiagnostic | null>(() => {
-    return diags.value.shift() ?? null;
+// Editor - 简化配置，专注基础文本编辑
+const editor = useEditor({
+    content: '<p>开始编写你的文档...</p>',
+    extensions: [StarterKit, Markdown],
+    contentType: 'markdown', // parse initial content as Markdown
+    onUpdate: () => {
+        updateStatistics()
+        updateCursorPosition()
+    },
+    onSelectionUpdate: () => {
+        updateCursorPosition()
+    },
 })
 
-const layoutcls = computed(() => {
-    if (mode.value == 'edit') {
-        return 'single-left'
-    } else if (mode.value == 'preview') {
-        return 'single-right'
-    } else {
-        return ''
-    }
+// 简单的编辑器工具函数
+const updateStatistics = () => {
+    if (!editor.value) return
+
+    const text = editor.value.getText()
+    const words = text.trim().split(/\s+/).filter(word => word.length > 0)
+    wordCount.value = words.length
+    charCount.value = text.length
+}
+
+const updateCursorPosition = () => {
+    if (!editor.value) return
+
+    const { from } = editor.value.state.selection
+    const resolvedPos = editor.value.state.doc.resolve(from)
+    cursorLine.value = resolvedPos.index(0) + 1
+    cursorCol.value = resolvedPos.index(1) + 1
+}
+
+const saveDocument = () => {
+    console.log('Save document - not implemented yet')
+}
+
+onMounted(() => {
+    updateStatistics()
 })
 
-const exportPdf = async () => {
-    const filePath = await save({
-        filters: [{
-            name: 'export_pdf',
-            extensions: ['pdf']
-        }]
-    });
-    const res = await invoke('export_pdf', { path: filePath })
-}
-
-const compile_main_file = async () => {
-    const mainpath = systemStore.editingProject?.path + '/main.typ';
-    try {
-        const content = await readTextFile(mainpath);
-        const [res, diags] = await invoke<TypstCompileResult>("typst_compile_doc", { path: '/main.typ', content });
-        console.warn(res, diags)
-        if (Array.isArray(res)) {
-            pages.value = res;
-        }
-    } catch (error) {
-        console.warn(error)
-        pages.value = [];
-    }
-}
-
-const onCompile = (data: TypstCompileResult) => {
-    console.log('onCompile: data', data)
-    const [rpages, rdiags] = data;
-    pages.value = rpages;
-    diags.value = rdiags
-}
-
-
-const onChange = (text: string) => {
-
-}
-
-const onWhell = (evt: WheelEvent) => {
-
-    if (evt.ctrlKey) {
-        evt.stopPropagation();
-        evt.preventDefault();
-        console.log(evt)
-        const deltaY = evt.deltaY;
-        scale.value += deltaY / 100; // 示例：每次滚动增加或减少一定的比例
-
-        // 限制缩放比例范围
-        scale.value = Math.min(2, Math.max(0.5, scale.value));
-    }
-
-}
-
-onMounted(async () => {
-    await compile_main_file();
+onUnmounted(() => {
+    editor.value?.destroy()
 })
-
-
-
 </script>
 
 <style scoped>
-.typster {
-    --action-bar: 36px;
-    height: 100%;
+.typst-wysiwyg-editor {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: #ffffff;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     overflow: hidden;
+}
 
-    .actions {
-        height: var(--action-bar);
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 0 32px;
-        padding-left: 72px;
-        gap: 8px;
-        border-bottom: 1px solid #ddd;
+/* Title Bar - Typora Style */
+.title-bar {
+    height: 36px;
+    background: #fafafa;
+    border-bottom: 1px solid #e1e5e9;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    user-select: none;
+    flex-shrink: 0;
+}
 
-        &.expand {
-            padding-left: 32px;
-        }
+.title-bar-left {
+    display: flex;
+    align-items: center;
+}
 
-        .left,
-        .right,
-        .middle {
-            display: inline-flex;
-            gap: 8px;
-            align-items: center;
-        }
+.document-title {
+    font-size: 14px;
+    color: #666;
+    font-weight: 500;
+}
+
+.title-bar-center {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+}
+
+.window-controls {
+    display: flex;
+    gap: 8px;
+}
+
+.window-control {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: #fff;
+    font-weight: bold;
+}
+
+.window-control.minimize {
+    background: #febc2e;
+}
+
+.window-control.maximize {
+    background: #28ca42;
+}
+
+.window-control.close {
+    background: #ff5f57;
+}
+
+.title-bar-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.toolbar-button {
+    padding: 4px 12px;
+    background: #007acc;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.toolbar-button:hover {
+    background: #005a9e;
+}
+
+/* Editor Container */
+.editor-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+
+.tiptap-editor {
+    min-height: 100%;
+    line-height: 1.6;
+    font-size: 16px;
+    color: #2c3e50;
+    padding: 40px 60px;
+    overflow-y: auto;
+
+    :deep(.tiptap) {
+        outline: none;
+        min-height: 100%;
+        width: 100%;
     }
+}
 
-    .content {
-        display: flex;
-        height: calc(100% - var(--action-bar));
 
-        .source {
-            flex: 1;
-            overflow: auto;
-            height: 100%;
-        }
+/* Status Bar */
+.status-bar {
+    height: 24px;
+    background: #f8f9fa;
+    border-top: 1px solid #e1e5e9;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    font-size: 12px;
+    color: #666;
+    flex-shrink: 0;
+}
 
-        .result {
-            flex: 1;
-            background-color: #f1f1f1;
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            justify-content: center;
-            overflow: auto;
-            height: 100%;
-            position: relative;
-        }
+.status-left,
+.status-right {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+}
 
-        .result.error {
-            overflow: hidden;
-        }
-    }
+.status-left span,
+.status-right span {
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-size: 11px;
 }
 </style>

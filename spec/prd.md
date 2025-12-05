@@ -69,9 +69,10 @@ Typst 作为 LaTeX 的现代化替代品，虽然编译速度极快且语法简�
 ## 4. 系统架构与非功能需求 (Architecture & NFR)
 
 ### 4.1 架构设计
-* **Frontend (UI):** Vue 3 + Tiptap (ProseMirror)。
+* **Frontend (UI):** Vue 3 + Tiptap (ProseMirror) + primevue。
     * 自定义 **Extension** 用于解析 Typst 语法。
     * 自定义 **NodeView** 用于实现数学公式和复杂节点的“源码/预览”切换。
+    使用pnpm 构建
 * **Bridge:** Tauri IPC (Commands & Events)。
 * **Backend (Core):** Rust。
     * **In-Memory World:** 维护一个虚拟文件系统（Shadow File System），将前端的内存字符串作为编译源，而非每次读取磁盘。

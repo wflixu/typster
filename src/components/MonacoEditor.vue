@@ -130,6 +130,14 @@ watch(() => props.path, () => {
   }
 })
 
+// Expose methods for parent components
+defineExpose({
+  editor: monacoEditor,
+  getModel: () => monacoEditor?.getModel(),
+  getValue: () => monacoEditor?.getModel()?.getValue() || '',
+  setValue: (value: string) => monacoEditor?.getModel()?.setValue(value),
+  focus: () => monacoEditor?.focus(),
+})
 
 </script>
 

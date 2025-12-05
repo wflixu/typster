@@ -29,21 +29,20 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         // .manage(appstate)
         .invoke_handler(tauri::generate_handler![
-            cmds::doc::greet2,
             cmds::doc::load_doc_from_path,
-            // ipc::commands::fs_list_dir,
-            // ipc::commands::fs_read_file_binary,
-            // ipc::commands::fs_read_file_text,
-            // ipc::commands::fs_create_file,
-            // ipc::commands::fs_write_file_binary,
-            // ipc::commands::fs_write_file_text,
-            // ipc::commands::load_project_from_path,
-            // ipc::commands::typst_compile_doc,
-            // ipc::commands::typst_render,
-            // ipc::commands::typst_autocomplete,
-            // ipc::commands::typst_slot_update,
-            // ipc::commands::export_pdf,
-            // ipc::commands::clipboard_paste
+            cmds::fs::fs_list_dir,
+            cmds::fs::fs_read_file_binary,
+            cmds::fs::fs_read_file_text,
+            cmds::fs::fs_create_file,
+            cmds::fs::fs_write_file_binary,
+            cmds::fs::fs_write_file_text,
+            // cmds::fs::load_project_from_path,
+            cmds::typst::typst_compile_doc,
+            cmds::typst::typst_render,
+            cmds::typst::typst_autocomplete,
+            cmds::typst::typst_slot_update,
+            cmds::typst::export_pdf,
+            // cmds::typst::clipboard_paste
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
