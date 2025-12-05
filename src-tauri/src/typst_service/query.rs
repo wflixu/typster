@@ -6,7 +6,7 @@ use typst::foundations::{Content, IntoValue, LocatableSelector, Scope};
 use typst::layout::PagedDocument;
 use typst::syntax::Span;
 use typst::World;
-use typst_eval::{eval_string, EvalMode};
+use typst_eval::eval_string;
 
 
 use super::world::SystemWorld;
@@ -53,9 +53,10 @@ fn retrieve(
     let selector = eval_string(
         &typst::ROUTINES,
         world.track(),
+        typst::engine::TrackedMut::default(),
         &config.selector,
         Span::detached(),
-        EvalMode::Code,
+        typst::syntax::SyntaxMode::Code,
         Scope::default(),
     )
     .map_err(|errors| {

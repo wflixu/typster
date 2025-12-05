@@ -1,4 +1,4 @@
-mod doc;
+pub mod doc;
 mod model;
 
 pub use doc::*;

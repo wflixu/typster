@@ -3,27 +3,47 @@ use std::{path::PathBuf, sync::Arc};
 use tauri::{Runtime, State, Window};
 
 use crate::cmds::{TypstPage, TypstSourceDiagnostic};
-use crate::state::AppState;
+use crate::config::ConfigLoader;
+// use crate::state::AppState;
 use crate::typst_service::SystemWorld;
 use crate::util::AppError;
 
 // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
 #[tauri::command]
 pub fn greet2(name: &str) -> String {
-    format!("Hello, {}! You've been greeted from Rust!", name)
+    // 测试配置系统集成
+    let loader = ConfigLoader::new();
+
+    // 尝试加载全局配置
+    match loader.load_config(None) {
+        Ok(runtime_config) => {
+            format!("Hello, {}! Configuration loaded successfully. Compiler input: {:?}, Output: {:?}",
+                   name,
+                   runtime_config.compile_args.input,
+                   runtime_config.compile_args.output)
+        }
+        Err(e) => {
+            format!("Hello, {}! Configuration error: {}", name, e)
+        }
+    }
 }
 
 #[tauri::command]
-pub async fn load_doc_from_path<R: Runtime>(
-    window: Window<R>,
-    appstate: State<'_, Arc<AppState<R>>>,
-    path: String,
-) -> Result<bool, AppError> {
+pub async fn load_doc_from_path(path: String) -> Result<bool, AppError> {
     info!("load_doc_from_path : {}", &path);
     let path_buf = PathBuf::from(&path);
-    let loaded = appstate.load_world_from_path(&path_buf, &window);
-    info!("succeed load_world_from_path {}", &path);
-    Ok(loaded)
+
+    // 使用新的配置系统创建SystemWorld
+    match SystemWorld::load_from_path(&path_buf) {
+        Ok(mut _world) => {
+            info!("succeeded to load world from path: {}", &path);
+            Ok(true)
+        }
+        Err(e) => {
+            warn!("failed to load world from path {}: {}", &path, e);
+            Err(AppError::Unknown)
+        }
+    }
 }
 
 // #[tauri::command]

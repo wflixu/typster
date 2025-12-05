@@ -2,10 +2,10 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 #![allow(unused_imports, unused_variables, dead_code, unused_mut)]
 
-mod cmd;
+// mod cmd;
 // mod ipc;
 // mod project;
-// mod cmds;
+mod cmds;
 mod typst_service;
 // mod state;
 mod util;
@@ -29,9 +29,8 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         // .manage(appstate)
         .invoke_handler(tauri::generate_handler![
-            cmd::greet,
-            // cmds::greet2,
-            // cmds::load_doc_from_path,
+            cmds::doc::greet2,
+            cmds::doc::load_doc_from_path,
             // ipc::commands::fs_list_dir,
             // ipc::commands::fs_read_file_binary,
             // ipc::commands::fs_read_file_text,

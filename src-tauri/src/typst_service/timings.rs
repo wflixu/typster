@@ -28,7 +28,7 @@ impl Timer {
             typst_timing::enable();
         }
 
-        let path = record.map(|path| path.unwrap_or_else(|| PathBuf::from("record-{n}.json")));
+        let path = record.or_else(|| Some(PathBuf::from("record-{n}.json")));
 
         Timer { path, index: 0 }
     }
@@ -78,6 +78,21 @@ fn resolve_span(world: &SystemWorld, span: Span) -> Option<(String, u32)> {
     let id = span.id()?;
     let source = world.source(id).ok()?;
     let range = source.range(span)?;
-    let line = source.byte_to_line(range.start)?;
-    Some((format!("{id:?}"), line as u32 + 1))
+
+    // Calculate line number manually for typst 0.14.0
+    let text = source.text();
+    let mut line = 1;
+    let mut byte_count = 0;
+
+    for ch in text.chars() {
+        if byte_count >= range.start {
+            break;
+        }
+        if ch == '\n' {
+            line += 1;
+        }
+        byte_count += ch.len_utf8();
+    }
+
+    Some((format!("{id:?}"), line as u32))
 }

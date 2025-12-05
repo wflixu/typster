@@ -4,7 +4,7 @@
         <div class="content">
             <div v-if="isEmpty">
                 <Card>
-                    没有项目 
+                    没有项目
                 </Card>
             </div>
             <ul class="list">
@@ -12,8 +12,7 @@
                     <h2>{{ project.title }}</h2>
                     <p> {{ project.path }}</p>
                     <div class="actions">
-                        <Button @click.stop="onDeleteProject(project)" size="small" shape="circle"
-                            icon="pi pi-trash" />
+                        <Button @click.stop="onDeleteProject(project)" size="small" shape="circle" icon="pi pi-trash" />
                     </div>
                 </li>
 
@@ -43,15 +42,15 @@ const list = computed(() => {
     return systemStore.projects;
 });
 
-const isEmpty = computed(() =>{
-   return list.value?.length < 1;
+const isEmpty = computed(() => {
+    return list.value?.length < 1;
 });
 
-const onSelect = async (pr: IProject) =>{
+const onSelect = async (pr: IProject) => {
 
     systemStore.selectProject(pr);
     systemStore.setLoading(true);
-    await invoke('load_doc_from_path', {path: pr.path});
+    await invoke('load_doc_from_path', { path: pr.path });
     systemStore.setLoading(false);
     router.push('/home')
 }
@@ -95,7 +94,7 @@ onMounted(() => {
         display: flex;
         flex-wrap: wrap;
         gap: 40px;
-        
+
         .list-item {
             flex-shrink: 0;
             cursor: pointer;
@@ -107,6 +106,7 @@ onMounted(() => {
             /* max-width: 420px; */
             min-width: max(240px, 20vw);
             flex: 1;
+
             .actions {
                 position: absolute;
                 right: 16px;

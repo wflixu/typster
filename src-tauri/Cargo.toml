@@ -47,7 +47,7 @@ tokio = { version = "1", features = ["rt", "rt-multi-thread", "macros"] }
 log = "0.4.28"
 env_logger = "0.11.8"
 notify = "6.1"
-comemo = "0.4.0"
+comemo = "0.5.0"
 chrono = { version = "0.4.24", default-features = false, features = ["clock", "std", "serde"] }
 dirs = "5.0"
 memmap2 = "0.9"
