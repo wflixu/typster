@@ -1,15 +1,16 @@
 {
-  "identifier": "main-capability",
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
   "description": "Capability for the main window",
   "windows": [
     "main"
   ],
   "permissions": [
     "core:default",
+     "fs:default",
     "fs:allow-read-file",
     "fs:allow-write-file",
     "fs:allow-write-text-file",
-    "fs:allow-read-dir",
     "fs:allow-copy-file",
     "fs:allow-mkdir",
     "fs:allow-remove",
@@ -18,34 +19,42 @@
     "dialog:allow-open",
     "dialog:allow-save",
     {
-      "identifier": "fs:scope",
-      "allow": [
-        "$HOME/**/*"
-      ]
-    },
-    {
       "identifier": "fs:allow-read-dir",
       "allow": [
-        "$HOME/**/*"
+        {
+          "path": "$HOME/**/*"
+        },
+        {
+          "path": "$HOME/**"
+        }
       ]
     },
     {
       "identifier": "fs:allow-read-file",
       "allow": [
-        "$HOME/**/*"
+        {
+          "path": "$HOME/**/*"
+        },
+        {
+          "path": "$HOME/**"
+        }
       ]
     },
     {
       "identifier": "fs:allow-write-file",
       "allow": [
-        "$HOME/**/*"
+        {
+          "path": "$HOME/**/*"
+        },
+        {
+          "path": "$HOME/**"
+        }
       ]
     },
     "core:window:allow-center",
     "core:window:allow-set-position",
     "core:window:allow-set-size",
     "core:window:allow-set-maximizable",
-    "core:window:allow-set-minimizable",
-    "fs:default"
+    "core:window:allow-set-minimizable"
   ]
 }
