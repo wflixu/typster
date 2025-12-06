@@ -7,7 +7,7 @@
 | **项目名称** | Typster (暂定名) |
 | **版本号** | v0.1.0 (MVP) |
 | **状态** | 规划中 |
-| **核心对标** | Typora (Markdown), Obsidian (插件模式), Overleaf (左写右看) |
+| **核心对标** | Typora (Markdown)|
 | **技术栈** | Tauri v2, Vue 3, Tiptap (ProseMirror), Rust (typst crate) |
 | **目标平台** | macOS (Apple Silicon & Intel) |
 
