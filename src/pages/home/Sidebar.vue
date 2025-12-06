@@ -60,9 +60,9 @@ import { join } from '@tauri-apps/api/path';
 import type { DirEntry } from '@tauri-apps/plugin-fs';
 import type { TreeNode } from 'primevue/treenode';
 import Button from 'primevue/button';
+import ContextMenu from 'primevue/contextmenu';
 import MoveBar from '../../components/MoveBar.vue';
 import { useSystemStoreHook } from '../../store/store';
-import { SidebarType } from '../../shared/interface';
 
 // 定义文件系统条目的类型，用于处理 Tauri fs API 返回的数据
 type FileSystemEntry = {
@@ -73,16 +73,15 @@ type FileSystemEntry = {
 }
 
 
-const sidebarType = ref<SidebarType>('file');
-
+// 使用全局状态
 const isToc = computed(() => {
-  return sidebarType.value === 'toc';
+  return systemStore.sidebarType === 'toc';
 })
 const onToggle = () => {
-  if (sidebarType.value === 'file') {
-    sidebarType.value = 'toc';
+  if (systemStore.sidebarType === 'file') {
+    systemStore.setSidebarType('toc');
   } else {
-    sidebarType.value = 'file';
+    systemStore.setSidebarType('file');
   }
 }
 
@@ -98,17 +97,37 @@ const projects = computed(() => {
 })
 
 const menuRef = ref();
-const items = ref([
-  {
-    label: 'Delect', icon: 'pi pi-trash', command: (e) => {
-      console.log(e)
+const selectedNode = ref<TreeNode | null>(null);
+
+// 动态菜单项
+const items = computed(() => {
+  if (!selectedNode.value) return [];
+
+  const node = selectedNode.value;
+  const baseItems = [
+    {
+      label: '重命名',
+      icon: 'pi pi-file-edit',
+      command: () => handleRename(node)
     }
-  },
-  { label: 'Rename', icon: 'pi pi-file-edit' }
-]);
-const onRightClick = (event, node) => {
-  console.log(node, event, menuRef.value)
-  menuRef.value?.show();
+  ];
+
+  // 只有文件才显示删除选项，且不能删除 main.typ
+  if (!node.isDirectory && node.label !== 'main.typ') {
+    baseItems.push({
+      label: '删除',
+      icon: 'pi pi-trash',
+      command: () => handleDelete(node)
+    });
+  }
+
+  return baseItems;
+});
+
+const onRightClick = (event: MouseEvent, node: TreeNode) => {
+  event.preventDefault();
+  selectedNode.value = node;
+  menuRef.value?.show(event);
 }
 
 const projectItems = projects.value.map(item => {
@@ -247,30 +266,55 @@ const getFileIcon = (fileName: string): string => {
   }
 }
 
-const onContextMenuClick = async (treeKey: string, menuKey: string | number) => {
-  console.log(`treeKey: ${treeKey}, menuKey: ${menuKey}`);
+// 处理重命名
+const handleRename = async (node: TreeNode) => {
+  if (!node?.key) return;
 
-  if (menuKey == 'delete' && treeKey) {
-    if (treeKey.endsWith('main.typ')) {
-      alert('The main.typ file cannot be deleted')
-      return
-    }
-    await remove(treeKey);
-  }
-  if (menuKey == 'rename' && treeKey) {
+  try {
     const filePath = await save({
-      title: "Rename file",
+      title: "重命名文件",
       filters: [{
-        name: 'untitled',
-        extensions: ['typ', 'bib', 'yml']
+        name: '文件',
+        extensions: ['typ', 'bib', 'yml', 'yaml', 'md']
       }],
-      defaultPath: treeKey
+      defaultPath: node.key as string
     });
-    if (filePath) {
-      await rename(treeKey, filePath);
+
+    if (filePath && filePath !== node.key) {
+      await rename(node.key as string, filePath);
+
+      // 如果重命名的文件是当前编辑的文件，更新编辑路径
+      if (systemStore.editingFilePath === node.key) {
+        systemStore.setEditingFilePath(filePath);
+      }
+
+      await initFiles();
     }
+  } catch (error) {
+    console.error('重命名失败:', error);
   }
-  await initFiles();
+};
+
+// 处理删除
+const handleDelete = async (node: TreeNode) => {
+  if (!node?.key || node.isDirectory) return;
+
+  // 确认删除
+  const confirmDelete = confirm(`确定要删除文件 "${node.label}" 吗？`);
+  if (!confirmDelete) return;
+
+  try {
+    await remove(node.key as string);
+
+    // 如果删除的是当前编辑的文件，清空编辑器
+    if (systemStore.editingFilePath === node.key) {
+      systemStore.setEditingFilePath('');
+    }
+
+    await initFiles();
+  } catch (error) {
+    console.error('删除失败:', error);
+  }
 };
 
 const onSelect = (node: TreeNode) => {
