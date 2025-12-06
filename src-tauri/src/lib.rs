@@ -28,12 +28,6 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
-       .setup(|app| {
-          // allowed the given directory
-          let scope = app.fs_scope();
-          scope.allow_directory("$HOME", true);
-          Ok(())
-       })
         // .manage(appstate)
         .invoke_handler(tauri::generate_handler![
             cmds::doc::load_doc_from_path,

@@ -4,3 +4,4 @@ export interface IEditingInfo {
     cursorLine: number;
     cursorCol: number;
 }
+export type SidebarType = 'file' | 'toc'

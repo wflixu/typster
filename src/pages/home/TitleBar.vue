@@ -3,10 +3,9 @@
         <div class="title-bar-left">
         </div>
         <div class="title-bar-center">
-
+            <span class="document-title">{{ editingFileName }}</span>
         </div>
         <div class="title-bar-right">
-            <!--  -->
             <i class="pi  cursor-pointer" :class="{
                 'pi-angle-double-left': systemStore.showSidebar,
                 'pi-angle-double-right': !systemStore.showSidebar,
@@ -17,11 +16,18 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue';
 import { useSystemStoreHook } from '../../store/store';
 
-
 const systemStore = useSystemStoreHook()
-
+const editingFileName = computed(() => {
+    const path = systemStore.editingFilePath
+    if (path) {
+        return path.split('/').pop() || '未命名.md'
+    } else {
+        return '未命名.md'
+    }
+})
 
 </script>
 
@@ -49,7 +55,7 @@ const systemStore = useSystemStoreHook()
 
 
 .document-title {
-    font-size: 14px;
+    font-size: 16px;
     color: #666;
     font-weight: 500;
 }

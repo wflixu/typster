@@ -5,9 +5,34 @@
     </div>
     <div class="content">
       <div class="title">
-        <span>
-          Files
-        </span>
+        <template v-if="isToc">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+            width="24" height="24" fill="none" @click="onToggle" class="cursor-pointer">
+            <rect id="toc" width="24" height="24" x="0.000000" y="0.000000" fill="rgba(120, 118, 118, 1)"
+              fill-opacity="0" />
+            <path id="矢量 1"
+              d="M18.984 13.9713L18.984 11.0272L21 11.0272L21 13.9713L18.984 13.9713ZM18.984 5L21 5L21 8.01435L18.984 8.01435L18.984 5ZM18.984 20L18.984 16.9856L21 16.9856L21 20L18.984 20ZM3 20L3 16.9856L17.016 16.9856L17.016 20L3 20ZM3 13.9713L3 11.0272L17.016 11.0272L17.016 13.9713L3 13.9713ZM3 8.01435L3 5L17.016 5L17.016 8.01435L3 8.01435Z"
+              fill="rgba(120, 118, 118, 1)" fill-rule="nonzero" />
+          </svg>
+          <span>
+            Table of Contents
+          </span>
+        </template>
+
+        <template v-else>
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+            width="24" height="24" fill="none" class="cursor-pointer" @click="onToggle">
+            <rect id="file-tree" width="24" height="24" x="0.000000" y="0.000000" fill="rgba(120, 118, 118, 1)"
+              fill-opacity="0" />
+            <path id="矢量 2"
+              d="M3 3L9 3L9 7L3 7L3 3ZM15 10L21 10L21 14L15 14L15 10M15 17L21 17L21 21L15 21L15 17ZM13 13L7 13L7 18L13 18L13 20L5 20L5 9L7 9L7 11L13 11L13 13L13 13Z"
+              fill="rgba(120, 118, 118, 1)" fill-rule="nonzero" />
+          </svg>
+          <span>
+            Files
+          </span>
+        </template>
+        <span></span>
       </div>
       <ContextMenu ref="menuRef" :model="items" />
       <Tree class="dir" v-model:selectionKeys="selectedKeys" selectionMode="single" :value="treeData"
@@ -21,23 +46,23 @@
     </div>
     <div class="footer">
       <Button icon="pi pi-plus" aria-label="Save" size="small" @click="onCreateFile" />
-      <Select :value="systemStore.editingProject?.path" :options="projects" optionLabel="title" option-value="path"
-        class="w-full md:w-56" @change="onSelectProject" />
+      <Select :value="systemStore.editingProject?.path" size="small" :options="projects" optionLabel="title"
+        option-value="path" class="w-full md:w-56" @change="onSelectProject" />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, onMounted, computed } from 'vue';
-import Button from 'primevue/button';
-import MoveBar from '../../components/MoveBar.vue';
 import { readDir, writeTextFile, remove, rename } from '@tauri-apps/plugin-fs';
-import { useSystemStoreHook } from '../../store/store';
 import { save } from '@tauri-apps/plugin-dialog';
 import { join } from '@tauri-apps/api/path';
-// 在 script setup 顶部加上类型导入
 import type { DirEntry } from '@tauri-apps/plugin-fs';
 import type { TreeNode } from 'primevue/treenode';
+import Button from 'primevue/button';
+import MoveBar from '../../components/MoveBar.vue';
+import { useSystemStoreHook } from '../../store/store';
+import { SidebarType } from '../../shared/interface';
 
 // 定义文件系统条目的类型，用于处理 Tauri fs API 返回的数据
 type FileSystemEntry = {
@@ -47,6 +72,19 @@ type FileSystemEntry = {
   children?: FileSystemEntry[];
 }
 
+
+const sidebarType = ref<SidebarType>('file');
+
+const isToc = computed(() => {
+  return sidebarType.value === 'toc';
+})
+const onToggle = () => {
+  if (sidebarType.value === 'file') {
+    sidebarType.value = 'toc';
+  } else {
+    sidebarType.value = 'file';
+  }
+}
 
 
 const systemStore = useSystemStoreHook();
@@ -244,7 +282,7 @@ const onCreateFile = async () => {
     title: "新建文件",
     filters: [{
       name: 'untitled',
-      extensions: ['typ', 'bib', 'yml', 'yaml']
+      extensions: ['typ', 'bib', 'yml', 'yaml', 'md']
     }],
     defaultPath: systemStore.editingProject?.path
 
@@ -257,7 +295,6 @@ const onCreateFile = async () => {
 }
 
 const onSelectProject = ({ key }: any) => {
-
   let selectedProject = systemStore.projects.find(item => item.path == key)
   if (selectedProject) {
     systemStore.selectProject(selectedProject)
@@ -297,11 +334,12 @@ onMounted(() => {
     justify-content: space-between;
     align-items: center;
     border-bottom: 1px solid #ddd;
-    margin-bottom: 16px
   }
 
   & :deep(.dir) {
-    height: calc(100% - 60px);
+    height: calc(100% - 40px);
+    padding: 8px 0;
+    overflow-y: auto;
   }
 
   .footer {

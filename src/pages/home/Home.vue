@@ -64,6 +64,7 @@ main.expand {
     .editor {
         grid-area: editor;
         /* 展开时指定到编辑器区域 */
+       overflow-y: auto;
     }
 
     .status {
