@@ -1,25 +1,27 @@
 <template>
   <div class="sidebar">
-    <SidebarToggle v-if="systemStore.showSidebar" class="toggle" />
-    <div class="title">
-      <span>
-        Files
-      </span>
-      <Button icon="pi pi-plus" aria-label="Save" size="small" @click="onCreateFile" />
-
+    <div class="move">
+      <MoveBar />
     </div>
-    <ContextMenu ref="menuRef" :model="items" />
-    <Tree class="dir" v-model:selectionKeys="selectedKeys" selectionMode="single" :value="treeData"
-      @nodeSelect="onSelect">
-      <template #default="{ node }">
-        <div @contextmenu="onRightClick($event, node)">
-          <span>{{ node.label }}</span>
-        </div>
-      </template>
-    </Tree>
-
+    <div class="content">
+      <div class="title">
+        <span>
+          Files
+        </span>
+      </div>
+      <ContextMenu ref="menuRef" :model="items" />
+      <Tree class="dir" v-model:selectionKeys="selectedKeys" selectionMode="single" :value="treeData"
+        @nodeSelect="onSelect">
+        <template #default="{ node }">
+          <div @contextmenu="onRightClick($event, node)">
+            <span>{{ node.label }}</span>
+          </div>
+        </template>
+      </Tree>
+    </div>
     <div class="footer">
-      <Select :value="systemStore.editingProject?.path" :options="projects" optionLabel="title" option-value="path" 
+      <Button icon="pi pi-plus" aria-label="Save" size="small" @click="onCreateFile" />
+      <Select :value="systemStore.editingProject?.path" :options="projects" optionLabel="title" option-value="path"
         class="w-full md:w-56" @change="onSelectProject" />
     </div>
   </div>
@@ -28,12 +30,9 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted, computed } from 'vue';
 import Button from 'primevue/button';
-
-// @ts-ignore
-import { readDir, FileEntry, writeTextFile, remove, rename } from '@tauri-apps/plugin-fs';
+import MoveBar from '../../components/MoveBar.vue';
+import { readDir, writeTextFile, remove, rename } from '@tauri-apps/plugin-fs';
 import { useSystemStoreHook } from '../../store/store';
-import SidebarToggle from './SidebarToggle.vue';
-// @ts-ignore
 import { save } from '@tauri-apps/plugin-dialog';
 import { join } from '@tauri-apps/api/path';
 
@@ -168,7 +167,7 @@ const onCreateFile = async () => {
 }
 
 const onSelectProject = ({ key }: any) => {
-  
+
   let selectedProject = systemStore.projects.find(item => item.path == key)
   if (selectedProject) {
     systemStore.selectProject(selectedProject)
@@ -177,6 +176,7 @@ const onSelectProject = ({ key }: any) => {
 }
 
 onMounted(() => {
+  console.info('------')
   initFiles().then(() => {
     // console.log(JSON.stringify(treeData))
   });
@@ -188,22 +188,18 @@ onMounted(() => {
 <style scoped>
 .sidebar {
   width: 300px;
-  padding-top: 36px;
-  display: flex;
-  flex-direction: column;
-  box-sizing: border-box;
+  height: 100%;
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows:  32px 1fr 36px;
   border-right: 1px solid #ddd;
   position: relative;
-
-  .toggle {
-    position: absolute;
-    right: 8px;
-    top: 0;
+  .move {
+    height: 32px;
   }
-
   .title {
-    height: 60px;
-    padding: 20px 16px 0 16px;
+    height: 40px;
+    padding: 8px 16px 0 16px;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -212,16 +208,17 @@ onMounted(() => {
   }
 
   & :deep(.dir) {
-    flex: 1;
+    height: calc(100% - 60px);
   }
 
   .footer {
-    height: 42px;
+    height: 36px;
+    padding: 0 16px;
+    gap: 8px;
     border-top: 1px solid #ddd;
-    margin-top: 20px;
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: space-between;
   }
 }
 </style>

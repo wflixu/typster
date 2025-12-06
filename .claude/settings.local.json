@@ -11,7 +11,8 @@
       "Bash(lsof:*)",
       "Bash(xargs kill:*)",
       "Bash(pnpm run td:*)",
-      "Bash(pnpm install:*)"
+      "Bash(pnpm install:*)",
+      "Bash(pnpm start:*)"
     ],
     "deny": [],
     "ask": []

@@ -1,33 +1,6 @@
 <template>
-    <div class="typst-wysiwyg-editor">
-        <!-- Typora-style Title Bar -->
-        <div class="title-bar">
-            <div class="title-bar-left">
-                <span class="document-title">Untitled</span>
-            </div>
-            <div class="title-bar-right">
-                <button class="toolbar-button" @click="saveDocument">Save</button>
-            </div>
-        </div>
-
-        <!-- Main Editor Area -->
-        <div class="editor-container">
-            <!-- Tiptap Editor -->
-
-            <editor-content :editor="editor" class="tiptap-editor" />
-
-
-            <!-- Status Bar -->
-            <div class="status-bar">
-                <div class="status-left">
-                    <span class="word-count">{{ wordCount }} words</span>
-                    <span class="char-count">{{ charCount }} characters</span>
-                </div>
-                <div class="status-right">
-                    <span class="cursor-position">Line {{ cursorLine }}, Col {{ cursorCol }}</span>
-                </div>
-            </div>
-        </div>
+    <div class="typst-editor">
+        <editor-content :editor="editor" class="tiptap-editor" />
     </div>
 </template>
 
@@ -35,17 +8,15 @@
 import { onMounted, onUnmounted, ref } from 'vue'
 import { useEditor, EditorContent } from '@tiptap/vue-3'
 import StarterKit from '@tiptap/starter-kit'
-import { Markdown } from '@tiptap/markdown'
+import { Markdown } from '@tiptap/markdown';
+import { useSystemStoreHook } from '../../store/store';
 
-// UI State
-const wordCount = ref(0)
-const charCount = ref(0)
-const cursorLine = ref(1)
-const cursorCol = ref(1)
+const systemStore = useSystemStoreHook();
+
 
 // Editor - 简化配置，专注基础文本编辑
 const editor = useEditor({
-    content: '<p>开始编写你的文档...</p>',
+    content: '<h1>Untitled Document</h1><p>Start writing your Typst document here...</p>',
     extensions: [StarterKit, Markdown],
     contentType: 'markdown', // parse initial content as Markdown
     onUpdate: () => {
@@ -63,8 +34,11 @@ const updateStatistics = () => {
 
     const text = editor.value.getText()
     const words = text.trim().split(/\s+/).filter(word => word.length > 0)
-    wordCount.value = words.length
-    charCount.value = text.length
+    systemStore.setEditingInfo({
+        wordCount: words.length,
+        charCount: text.length,
+    })
+
 }
 
 const updateCursorPosition = () => {
@@ -72,13 +46,13 @@ const updateCursorPosition = () => {
 
     const { from } = editor.value.state.selection
     const resolvedPos = editor.value.state.doc.resolve(from)
-    cursorLine.value = resolvedPos.index(0) + 1
-    cursorCol.value = resolvedPos.index(1) + 1
+    systemStore.setEditingInfo({
+        cursorLine: resolvedPos.index(0) + 1,
+        cursorCol: resolvedPos.index(1) + 1,
+    })
 }
 
-const saveDocument = () => {
-    console.log('Save document - not implemented yet')
-}
+
 
 onMounted(() => {
     updateStatistics()
@@ -90,96 +64,12 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.typst-wysiwyg-editor {
-    height: 100vh;
-    display: flex;
-    flex-direction: column;
+.typst-editor {
     background: #ffffff;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     overflow: hidden;
 }
 
-/* Title Bar - Typora Style */
-.title-bar {
-    height: 36px;
-    background: #fafafa;
-    border-bottom: 1px solid #e1e5e9;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 16px;
-    user-select: none;
-    flex-shrink: 0;
-}
-
-.title-bar-left {
-    display: flex;
-    align-items: center;
-}
-
-.document-title {
-    font-size: 14px;
-    color: #666;
-    font-weight: 500;
-}
-
-.title-bar-center {
-    flex: 1;
-    display: flex;
-    justify-content: center;
-}
-
-.window-controls {
-    display: flex;
-    gap: 8px;
-}
-
-.window-control {
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-    border: none;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 10px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    color: #fff;
-    font-weight: bold;
-}
-
-.window-control.minimize {
-    background: #febc2e;
-}
-
-.window-control.maximize {
-    background: #28ca42;
-}
-
-.window-control.close {
-    background: #ff5f57;
-}
-
-.title-bar-right {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.toolbar-button {
-    padding: 4px 12px;
-    background: #007acc;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 12px;
-}
-
-.toolbar-button:hover {
-    background: #005a9e;
-}
 
 /* Editor Container */
 .editor-container {
@@ -189,47 +79,54 @@ onUnmounted(() => {
     overflow: hidden;
 }
 
-
 .tiptap-editor {
-    min-height: 100%;
+    flex: 1;
     line-height: 1.6;
     font-size: 16px;
     color: #2c3e50;
     padding: 40px 60px;
     overflow-y: auto;
+    background: #ffffff;
 
     :deep(.tiptap) {
         outline: none;
         min-height: 100%;
         width: 100%;
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 20px 0;
     }
-}
 
+    :deep(.tiptap p) {
+        margin-bottom: 16px;
+        line-height: 1.8;
+    }
 
-/* Status Bar */
-.status-bar {
-    height: 24px;
-    background: #f8f9fa;
-    border-top: 1px solid #e1e5e9;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 16px;
-    font-size: 12px;
-    color: #666;
-    flex-shrink: 0;
-}
+    :deep(.tiptap h1) {
+        font-size: 2em;
+        font-weight: 600;
+        margin-top: 32px;
+        margin-bottom: 16px;
+        line-height: 1.3;
+        color: #1a1a1a;
+    }
 
-.status-left,
-.status-right {
-    display: flex;
-    gap: 16px;
-    align-items: center;
-}
+    :deep(.tiptap h2) {
+        font-size: 1.5em;
+        font-weight: 600;
+        margin-top: 24px;
+        margin-bottom: 12px;
+        line-height: 1.4;
+        color: #1a1a1a;
+    }
 
-.status-left span,
-.status-right span {
-    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-    font-size: 11px;
+    :deep(.tiptap h3) {
+        font-size: 1.25em;
+        font-weight: 600;
+        margin-top: 20px;
+        margin-bottom: 10px;
+        line-height: 1.4;
+        color: #1a1a1a;
+    }
 }
 </style>

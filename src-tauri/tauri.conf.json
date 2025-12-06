@@ -62,12 +62,13 @@
         "title": "typster",
         "center": true,
         "hiddenTitle": true,
-        "titleBarStyle": "Transparent",
+        "titleBarStyle": "Overlay",
         "theme": "Light",
         "width": 1200,
         "height": 900,
         "minWidth": 800,
-        "minHeight": 400
+        "minHeight": 400,
+        "decorations": true
       }
     ],
     "security": {
