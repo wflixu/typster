@@ -2,14 +2,14 @@ use super::world::ProjectWorld;
 use chrono::{DateTime, Utc};
 use log::{debug, info};
 use serde::{Deserialize, Serialize};
-use std::fmt::{self,Debug, Display, Formatter};
+use std::fmt::{self, Debug, Display, Formatter};
 use std::path::{Path, PathBuf};
 use std::sync::{Mutex, RwLock};
 use std::{fs, io};
 use thiserror::Error;
 use typst::diag::{FileError, FileResult};
-use typst::model::Document;
 use typst::syntax::VirtualPath;
+use typst::Document;
 
 const PATH_PROJECT_CONFIG_FILE: &str = ".typster/project.json";
 
@@ -56,9 +56,6 @@ impl Display for DiagnosticFormat {
     }
 }
 
-
-
-
 #[derive(Error, Debug)]
 pub enum ProjectConfigError {
     #[error("io error")]
@@ -95,7 +92,10 @@ impl ProjectConfig {
     pub fn apply_main(&self, project: &Project, world: &mut ProjectWorld) -> FileResult<()> {
         if let Some(main) = self.main.as_ref() {
             let vpath = VirtualPath::within_root(main, &project.root).expect("apply_main error");
-            debug!("setting main path {:?} for {:?}, vpath: {:?}", main, project, vpath);
+            debug!(
+                "setting main path {:?} for {:?}, vpath: {:?}",
+                main, project, vpath
+            );
             world.set_main_path(vpath);
             return Ok(());
         }
@@ -142,7 +142,10 @@ impl Project {
         };
         info!("the config is: {:#?}", &config);
         Self {
-            world: Mutex::new(ProjectWorld::new(path.clone(), config.clone()).expect("failed to create project world")),
+            world: Mutex::new(
+                ProjectWorld::new(path.clone(), config.clone())
+                    .expect("failed to create project world"),
+            ),
             cache: RwLock::new(Default::default()),
             config: RwLock::new(config),
             root: path,

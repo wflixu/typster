@@ -16,11 +16,9 @@ const { mousedownHandler,
 
 <style scoped>
 .move-bar {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 200px;
-    height: 36px;
-    z-index: 10;
+    height: 100%;
+    width: 100%;
+    cursor: move;
+    background-color: aqua;
 }
 </style>

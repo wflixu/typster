@@ -1,20 +1,21 @@
 <template>
-    <a-modal v-model:open="open" title="Add Project" @ok="handleOk">
+    <Dialog v-model:visible="open" modal header="Add Project" :style="{ width: '40vw' }">
         <template #footer>
-            <a-button class="w-full" key="submit" type="primary" :loading="loading" @click="handleOk">添加项目</a-button>
+            <Button class="w-full" key="submit"  :loading="loading" @click="handleOk">添加项目</Button>
         </template>
         <p>
             添加一个文件夹作为一个新项目
         </p>
         <div class="mb-4">
             <h3>Name</h3>
-            <a-input type="text" placeholder="project name" v-model:value="project.title" />
+            <InputText type="text" v-model="project.title"  placeholder="project name"/>
         </div>
         <div class="mb-4">
             <h3>Project Directory</h3>
-            <a-button @click="onSelectDir">{{ project.path ? project.path : '选择文件夹' }}</a-button>
+            <Button @click="onSelectDir">{{ project.path ? project.path : '选择文件夹' }}</Button>
         </div>
-    </a-modal>
+    </Dialog>
+
 </template>
 
 <script setup lang="ts">

@@ -2,11 +2,14 @@ import { createPinia, defineStore } from "pinia";
 import { reactive, ref, } from "vue";
 import { IProject } from "../pages/project/interface";
 import { IMode } from "../pages/typst/interface";
+import { IEditingInfo, SidebarType } from "../shared/interface";
+import { set } from "radash";
 
 const pinia = createPinia();
 const EDITING_FILE = "EDITING_FILE";
 const PROJECTS_KEY = "PROJECTS_KEY";
 const EDITING_PROJECT = "EDITING_PROJECT";
+
 
 const useSystemStoreHook = defineStore("system", () => {
   const editingFilePath = ref(window.localStorage.getItem(EDITING_FILE) ?? "");
@@ -61,6 +64,24 @@ const useSystemStoreHook = defineStore("system", () => {
     loading.value = state;
   };
 
+
+  const editingInfo = reactive<IEditingInfo>({
+    wordCount: 0,
+    charCount: 0,
+    cursorLine: 1,
+    cursorCol: 1,
+  })
+
+  const setEditingInfo = (data: Partial<IEditingInfo>) => {
+    Object.assign(editingInfo, data);
+  }
+
+  const sidebarType = ref<SidebarType>('file');
+  const setSidebarType = (type: SidebarType) => {
+    sidebarType.value = type;
+  }
+
+
   return {
     loading,
     setLoading,
@@ -78,6 +99,11 @@ const useSystemStoreHook = defineStore("system", () => {
     editingFilePath,
     setEditingFilePath,
     dirs,
+    editingInfo,
+    setEditingInfo,
+
+    sidebarType,
+    setSidebarType,
   };
 });
 

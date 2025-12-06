@@ -1,245 +1,302 @@
 <template>
-    <div class="typster" :class="layoutcls">
-        <div class="actions" :class="{ 'expand': systemStore.showSidebar }" @dblclick="toggleWindowMax"
-            @mousedown="mousedownHandler" @mouseup="mouseupHandler" @mousemove="mousemoveHandler"
-            @mouseleave="mouseleaveHandler">
-            <div class="left">
-                <SidebarToggle v-if="!systemStore.showSidebar" class="toggle" />
-                <!-- <a-button size="small" >
-                    <template #icon>
-                        <a-tooltip title="保存">
-                            <SaveOutlined />
-                        </a-tooltip>
-                    </template>
-</a-button> -->
-                <a-button size="small" @click="exportPdf">
-                    <template #icon>
-                        <a-tooltip title="导出PDF">
-                            <ExportOutlined />
-                        </a-tooltip>
-                    </template>
-                </a-button>
-                <!-- <a-button @click="onTest">test</a-button> -->
-            </div>
-            <div class="middle">
-                <a-radio-group v-model:value="mode" button-style="solid" size="small">
-                    <a-radio-button value="all">
-                        <OneToOneOutlined />
-                    </a-radio-button>
-                    <a-radio-button value="edit">
-                        <EditOutlined />
-                    </a-radio-button>
-                    <a-radio-button value="preview">
-                        <ReadOutlined />
-                    </a-radio-button>
-                </a-radio-group>
-            </div>
-            <div class="right">
-                <ViewScale v-model="scale" />
-                <!-- <template v-if="mode == 'preview'">
-                    <a-radio-group v-model:value="adjust" button-style="solid" size="small">
-                        <a-radio-button value="full">
-                            <OneToOneOutlined />
-                        </a-radio-button>
-                        <a-radio-button value="width">
-                            <EditOutlined />
-                        </a-radio-button>
-                        <a-radio-button value="height">
-                            <ReadOutlined />
-                        </a-radio-button>
-                    </a-radio-group>
-                </template> -->
-            </div>
-        </div>
-        <div class="content">
-            <div class="source bbox" v-show="mode != 'preview'">
-                <MonacoEditor :path="systemStore.editingFilePath" :root="systemStore.editingProject?.path"
-                    @change="onChange" @compiled="onCompile">
-                </MonacoEditor>
-            </div>
-
-            <div class="result" v-show="mode != 'edit'" @wheel="onWhell">
-                <DiagnosticsTip :diagnostic="diagnostic" />
-                <PreviewPage v-for="page in pages" :key="page.hash" v-bind="page" :scale="scale" />
-            </div>
-        </div>
-
+    <div class="typst-editor">
+        <editor-content :editor="editor" class="tiptap-editor" />
     </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, computed } from 'vue';
-// @ts-ignore
-import { readTextFile } from '@tauri-apps/plugin-fs';
-import { invoke } from "@tauri-apps/api/core";
-import { EditOutlined, ReadOutlined, OneToOneOutlined, ExportOutlined } from '@ant-design/icons-vue'
-import type { IAdjust, IMode, TypstCompileResult, TypstPage, TypstSourceDiagnostic } from './interface';
+import { onMounted, onUnmounted, ref, watch } from 'vue'
+import { useEditor, EditorContent } from '@tiptap/vue-3'
+import StarterKit from '@tiptap/starter-kit'
+import { TaskItem, TaskList } from '@tiptap/extension-list'
+import CodeBlock from '@tiptap/extension-code-block'
+import { Markdown } from '@tiptap/markdown';
 import { useSystemStoreHook } from '../../store/store';
-import SidebarToggle from '../home/SidebarToggle.vue';
-import MonacoEditor from './../../components/MonacoEditor.vue'
-import PreviewPage from "./PreviewPage.vue"
-import DiagnosticsTip from './DiagnosticsTip.vue'
-// @ts-ignore
-import { save } from '@tauri-apps/plugin-dialog';
-import ViewScale from './ViewScale.vue'
-import { useWinMove } from "./../../shared/move-hook"
-// @ts-ignore
-import { getCurrentWindow } from '@tauri-apps/api/window';
+import { readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
+import { showSaveChanges, showFileError } from '../../utils/dialog-utils';
 
-const appWindow = getCurrentWindow()
-
-const { mousedownHandler,
-    mouseupHandler,
-    mousemoveHandler,
-    mouseleaveHandler } = useWinMove()
-
-
-const toggleWindowMax = async (event: MouseEvent) => {
-
-    if (event.target != event.currentTarget) {
-        return
-    }
-    await appWindow.toggleMaximize()
-
-}
 const systemStore = useSystemStoreHook();
-const mode = ref<IMode>(systemStore.mode);
-const pages = ref<TypstPage[]>([])
-const diags = ref<TypstSourceDiagnostic[]>([])
-const scale = ref(1);
 
-const diagnostic = computed<TypstSourceDiagnostic|null>(()=>{
-    
-    return diags.value.shift() ?? null;
-})
+// 文件保存状态
+const isSaving = ref(false);
+const hasUnsavedChanges = ref(false);
 
-const layoutcls = computed(() => {
-    if (mode.value == 'edit') {
-        return 'single-left'
-    } else if (mode.value == 'preview') {
-        return 'single-right'
-    } else {
-        return ''
-    }
-})
-
-const exportPdf = async () => {
-    const filePath = await save({
-        filters: [{
-            name: 'export_pdf',
-            extensions: ['pdf']
-        }]
-    });
-    const res = await invoke('export_pdf', { path: filePath })
+// 发送状态更新到状态栏
+const emitStatusUpdate = (type: 'saving' | 'saved' | 'loading' | 'error', text: string) => {
+    window.dispatchEvent(new CustomEvent('save-status', {
+        detail: { type, text }
+    }))
 }
 
+const emitUnsavedChangesUpdate = (hasChanges: boolean) => {
+    window.dispatchEvent(new CustomEvent('unsaved-changes', {
+        detail: hasChanges
+    }))
+}
 
+// Editor - 配置编辑器，正确使用@tiptap/markdown
+const editor = useEditor({
+    content: 'default content',
+    contentType: 'markdown',
+    extensions: [
+        StarterKit,
+        TaskList,
+        TaskItem.configure({
+          nested: true,
+        }),
+        CodeBlock,
+        Markdown.configure({
+            html: false, // 不使用HTML输入
+            transformPastedText: true, // 自动转换粘贴的文本为Markdown
+            transformCopiedText: false, // 复制时不转换
+            breaks: true, // 支持换行符
+        })
+    ],
+    onUpdate: () => {
+        updateStatistics()
+        updateCursorPosition()
+        hasUnsavedChanges.value = true
+        emitUnsavedChangesUpdate(true)
+    },
+    onSelectionUpdate: () => {
+        updateCursorPosition()
+    },
+    editorProps: {
+        attributes: {
+            spellcheck: 'false',
+        },
+    },
+})
 
+// 文件操作函数
+const loadFileContent = async (filePath: string) => {
+    if (!filePath || !editor.value) return;
 
-const compile_main_file = async () => {
-    const mainpath = systemStore.editingProject?.path + '/main.typ';
     try {
-        const content = await readTextFile(mainpath);
-        const [res, diags] = await invoke<TypstCompileResult>("typst_compile_doc", { path: '/main.typ', content });
-        console.warn(res,diags)
-        if (Array.isArray(res)) {
-            pages.value = res;
-        }
+        emitStatusUpdate('loading', '加载中...');
+        console.log('Loading file:', filePath);
+        const content = await readTextFile(filePath);
+
+        // 直接设置内容，让Markdown扩展自动解析
+        editor.value.commands.setContent(content, {
+            contentType: 'markdown',
+            emitUpdate: true,
+        });
+        hasUnsavedChanges.value = false;
+        emitUnsavedChangesUpdate(false);
+
+        // 立即更新统计信息
+        updateStatistics();
+        updateCursorPosition();
+
+        emitStatusUpdate('saved', '加载完成');
+        console.log('File loaded successfully, content:', content.substring(0, 100) + '...');
     } catch (error) {
-        console.warn(error)
-        pages.value = [];
+        console.error('Failed to load file:', error);
+        emitStatusUpdate('error', '加载失败');
+        await showFileError('读取文件失败', error);
     }
-}
+};
 
-const onCompile = (data: TypstCompileResult) => {
-    console.log('onCompile: data', data)
-    const [rpages, rdiags] = data;
-    pages.value = rpages;
-    diags.value = rdiags
-}
+const saveCurrentFile = async () => {
+    if (!systemStore.editingFilePath || !editor.value || isSaving.value) return;
 
-
-const onChange = (text: string) => {
-
-}
-
-const onWhell = (evt: WheelEvent) => {
-
-    if (evt.ctrlKey) {
-        evt.stopPropagation();
-        evt.preventDefault();
-        console.log(evt)
-        const deltaY = evt.deltaY;
-        scale.value += deltaY / 100; // 示例：每次滚动增加或减少一定的比例
-
-        // 限制缩放比例范围
-        scale.value = Math.min(2, Math.max(0.5, scale.value));
+    isSaving.value = true;
+    emitStatusUpdate('saving', '保存中...');
+    try {
+        // 使用 @tiptap/markdown 扩展的 getMarkdown() 方法获取 Markdown 内容
+        const markdownContent = editor.value.getMarkdown();
+        console.log('Saving markdown content:', markdownContent.substring(0, 100) + '...');
+        await writeTextFile(systemStore.editingFilePath, markdownContent);
+        hasUnsavedChanges.value = false;
+        emitUnsavedChangesUpdate(false);
+        emitStatusUpdate('saved', '已保存');
+        console.log('File saved successfully');
+    } catch (error) {
+        console.error('Failed to save file:', error);
+        emitStatusUpdate('error', '保存失败');
+        await showFileError('保存文件失败', error);
+    } finally {
+        isSaving.value = false;
     }
+};
 
+
+// 自动保存功能 (防抖)
+let saveTimeout: number | null = null;
+const autoSave = () => {
+    if (saveTimeout) {
+        clearTimeout(saveTimeout);
+    }
+    saveTimeout = setTimeout(() => {
+        if (hasUnsavedChanges.value) {
+            saveCurrentFile();
+        }
+    }, 60000); // 60秒后自动保存（1分钟）
+};
+
+// 统计函数
+const updateStatistics = () => {
+    if (!editor.value) return
+
+    const text = editor.value.getText()
+    const words = text.trim().split(/\s+/).filter(word => word.length > 0)
+    systemStore.setEditingInfo({
+        wordCount: words.length,
+        charCount: text.length,
+    })
 }
 
-onMounted(async () => {
-    await compile_main_file();
+const updateCursorPosition = () => {
+    if (!editor.value) return
+
+    const { from } = editor.value.state.selection
+    const doc = editor.value.state.doc
+    const text = doc.textBetween(0, from)
+    const lines = text.split('\n')
+
+    systemStore.setEditingInfo({
+        cursorLine: lines.length,
+        cursorCol: lines[lines.length - 1].length + 1,
+    })
+}
+
+// 监听 editingFilePath 变化
+watch(
+    () => systemStore.editingFilePath,
+    (newPath, oldPath) => {
+        if (newPath !== oldPath && newPath) {
+            // 检查是否有未保存的更改
+            if (hasUnsavedChanges.value && oldPath) {
+                showSaveChanges(oldPath, async () => {
+                    await saveCurrentFile();
+                    loadFileContent(newPath);
+                }, () => {
+                    loadFileContent(newPath);
+                });
+            } else {
+                loadFileContent(newPath);
+            }
+        } else if (!newPath) {
+            // 清空编辑器
+            editor.value?.commands.setContent('');
+            hasUnsavedChanges.value = false;
+            emitUnsavedChangesUpdate(false);
+        }
+    },
+);
+
+// 监听编辑器初始化完成，然后加载文件
+watch(editor, (newEditor) => {
+    if (newEditor && systemStore.editingFilePath) {
+        // 编辑器初始化完成且有文件路径，加载文件
+        loadFileContent(systemStore.editingFilePath);
+    }
+}, { immediate: true });
+
+// 监听编辑器内容变化，触发自动保存
+watch(hasUnsavedChanges, (newValue) => {
+    if (newValue) {
+        autoSave();
+    }
+});
+
+// 键盘快捷键处理
+const handleKeyDown = (event: KeyboardEvent) => {
+    // Command/Ctrl + S 保存
+    if ((event.metaKey || event.ctrlKey) && event.key === 's') {
+        event.preventDefault();
+        if (systemStore.editingFilePath && hasUnsavedChanges.value && !isSaving.value) {
+            saveCurrentFile();
+        }
+    }
+};
+
+// 暴露保存函数供外部使用
+defineExpose({
+    saveFile: saveCurrentFile,
+    hasUnsavedChanges: () => hasUnsavedChanges.value,
+    isSaving: () => isSaving.value
+});
+// 监听窗口关闭事件
+const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+    if (hasUnsavedChanges.value) {
+        event.preventDefault();
+        // 现代浏览器不需要设置returnValue
+    }
+};
+onMounted(() => {
+    updateStatistics()
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('keydown', handleKeyDown);
 })
 
-
-
+onUnmounted(() => {
+    editor.value?.destroy()
+    window.removeEventListener('beforeunload', handleBeforeUnload);
+    window.removeEventListener('keydown', handleKeyDown);
+    if (saveTimeout) {
+        clearTimeout(saveTimeout);
+    }
+})
 </script>
 
 <style scoped>
-.typster {
-    --action-bar: 36px;
-    height: 100%;
+.typst-editor {
+    background: #ffffff;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     overflow: hidden;
+}
 
-    .actions {
-        height: var(--action-bar);
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 0 32px;
-        padding-left: 72px;
-        gap: 8px;
-        border-bottom: 1px solid #ddd;
 
-        &.expand {
-            padding-left: 32px;
-        }
 
-        .left,
-        .right,
-        .middle {
-            display: inline-flex;
-            gap: 8px;
-            align-items: center;
-        }
+.tiptap-editor {
+    line-height: 1.6;
+    font-size: 16px;
+    color: #2c3e50;
+    padding: 40px 60px;
+    overflow-y: auto;
+    background: #ffffff;
+
+    :deep(.tiptap) {
+        outline: none;
+        min-height: 100%;
+        width: 100%;
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 20px 0;
     }
 
-    .content {
-        display: flex;
-        height: calc(100% - var(--action-bar));
+    :deep(.tiptap p) {
+        margin-bottom: 16px;
+        line-height: 1.8;
+    }
 
-        .source {
-            flex: 1;
-            overflow: auto;
-            height: 100%;
-        }
+    :deep(.tiptap h1) {
+        font-size: 2em;
+        font-weight: 600;
+        margin-top: 32px;
+        margin-bottom: 16px;
+        line-height: 1.3;
+        color: #1a1a1a;
+    }
 
-        .result {
-            flex: 1;
-            background-color: #f1f1f1;
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            justify-content: center;
-            overflow: auto;
-            height: 100%;
-            position: relative;
-        }
+    :deep(.tiptap h2) {
+        font-size: 1.5em;
+        font-weight: 600;
+        margin-top: 24px;
+        margin-bottom: 12px;
+        line-height: 1.4;
+        color: #1a1a1a;
+    }
 
-        .result.error {
-            overflow: hidden;
-        }
+    :deep(.tiptap h3) {
+        font-size: 1.25em;
+        font-weight: 600;
+        margin-top: 20px;
+        margin-bottom: 10px;
+        line-height: 1.4;
+        color: #1a1a1a;
     }
 }
 </style>
