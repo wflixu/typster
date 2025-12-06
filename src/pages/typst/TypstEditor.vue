@@ -19,6 +19,19 @@ const systemStore = useSystemStoreHook();
 const isSaving = ref(false);
 const hasUnsavedChanges = ref(false);
 
+// 发送状态更新到状态栏
+const emitStatusUpdate = (type: 'saving' | 'saved' | 'loading' | 'error', text: string) => {
+    window.dispatchEvent(new CustomEvent('save-status', {
+        detail: { type, text }
+    }))
+}
+
+const emitUnsavedChangesUpdate = (hasChanges: boolean) => {
+    window.dispatchEvent(new CustomEvent('unsaved-changes', {
+        detail: hasChanges
+    }))
+}
+
 // Editor - 配置编辑器，正确使用@tiptap/markdown
 const editor = useEditor({
     content: 'default content',
@@ -36,6 +49,7 @@ const editor = useEditor({
         updateStatistics()
         updateCursorPosition()
         hasUnsavedChanges.value = true
+        emitUnsavedChangesUpdate(true)
     },
     onSelectionUpdate: () => {
         updateCursorPosition()
@@ -52,6 +66,7 @@ const loadFileContent = async (filePath: string) => {
     if (!filePath || !editor.value) return;
 
     try {
+        emitStatusUpdate('loading', '加载中...');
         console.log('Loading file:', filePath);
         const content = await readTextFile(filePath);
 
@@ -61,14 +76,17 @@ const loadFileContent = async (filePath: string) => {
             emitUpdate: true,
         });
         hasUnsavedChanges.value = false;
+        emitUnsavedChangesUpdate(false);
 
         // 立即更新统计信息
         updateStatistics();
         updateCursorPosition();
 
+        emitStatusUpdate('saved', '加载完成');
         console.log('File loaded successfully, content:', content.substring(0, 100) + '...');
     } catch (error) {
         console.error('Failed to load file:', error);
+        emitStatusUpdate('error', '加载失败');
         await showFileError('读取文件失败', error);
     }
 };
@@ -77,15 +95,19 @@ const saveCurrentFile = async () => {
     if (!systemStore.editingFilePath || !editor.value || isSaving.value) return;
 
     isSaving.value = true;
+    emitStatusUpdate('saving', '保存中...');
     try {
         // 使用 @tiptap/markdown 扩展的 getMarkdown() 方法获取 Markdown 内容
         const markdownContent = editor.value.getMarkdown();
         console.log('Saving markdown content:', markdownContent.substring(0, 100) + '...');
         await writeTextFile(systemStore.editingFilePath, markdownContent);
         hasUnsavedChanges.value = false;
+        emitUnsavedChangesUpdate(false);
+        emitStatusUpdate('saved', '已保存');
         console.log('File saved successfully');
     } catch (error) {
         console.error('Failed to save file:', error);
+        emitStatusUpdate('error', '保存失败');
         await showFileError('保存文件失败', error);
     } finally {
         isSaving.value = false;
@@ -152,6 +174,7 @@ watch(
             // 清空编辑器
             editor.value?.commands.setContent('');
             hasUnsavedChanges.value = false;
+            emitUnsavedChangesUpdate(false);
         }
     },
 );
@@ -171,10 +194,22 @@ watch(hasUnsavedChanges, (newValue) => {
     }
 });
 
+// 键盘快捷键处理
+const handleKeyDown = (event: KeyboardEvent) => {
+    // Command/Ctrl + S 保存
+    if ((event.metaKey || event.ctrlKey) && event.key === 's') {
+        event.preventDefault();
+        if (systemStore.editingFilePath && hasUnsavedChanges.value && !isSaving.value) {
+            saveCurrentFile();
+        }
+    }
+};
+
 // 暴露保存函数供外部使用
 defineExpose({
     saveFile: saveCurrentFile,
-    hasUnsavedChanges: () => hasUnsavedChanges.value
+    hasUnsavedChanges: () => hasUnsavedChanges.value,
+    isSaving: () => isSaving.value
 });
 // 监听窗口关闭事件
 const handleBeforeUnload = (event: BeforeUnloadEvent) => {
@@ -186,11 +221,13 @@ const handleBeforeUnload = (event: BeforeUnloadEvent) => {
 onMounted(() => {
     updateStatistics()
     window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('keydown', handleKeyDown);
 })
 
 onUnmounted(() => {
     editor.value?.destroy()
     window.removeEventListener('beforeunload', handleBeforeUnload);
+    window.removeEventListener('keydown', handleKeyDown);
     if (saveTimeout) {
         clearTimeout(saveTimeout);
     }
@@ -205,16 +242,8 @@ onUnmounted(() => {
 }
 
 
-/* Editor Container */
-.editor-container {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-}
 
 .tiptap-editor {
-    flex: 1;
     line-height: 1.6;
     font-size: 16px;
     color: #2c3e50;
