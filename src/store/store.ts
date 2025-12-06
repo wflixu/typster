@@ -52,7 +52,7 @@ const useSystemStoreHook = defineStore("system", () => {
     mode.value = m;
   };
 
-  const showSidebar = ref(false);
+  const showSidebar = ref(true);
   const toggleShowSidebar = (show?: boolean) => {
     showSidebar.value = show ?? !showSidebar.value;
   };

@@ -107,7 +107,6 @@ const initFiles = async () => {
     try {
       // 读取目录内容
       const entries = await readDir(projectPath);
-      console.log('Directory entries:', entries);
 
       type DataNode = TreeNode & {
         leaf?: boolean;
@@ -288,6 +287,7 @@ onMounted(() => {
 
   .move {
     height: 32px;
+    padding-left: 80px;
   }
 
   .title {

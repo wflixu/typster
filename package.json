@@ -32,7 +32,6 @@
     "@tiptap/starter-kit": "^3.13.0",
     "@tiptap/vue-3": "^3.13.0",
     "ant-design-vue": "~4.2.6",
-    "monaco-editor": "^0.46.0",
     "pinia": "^3.0.4",
     "primeicons": "^7.0.0",
     "primevue": "^4.5.1",
@@ -44,8 +43,6 @@
     "prosemirror-view": "^1.41.4",
     "radash": "^12.1.1",
     "today-ui": "^0.2.0",
-    "vscode-oniguruma": "^2.0.1",
-    "vscode-textmate": "^9.3.0",
     "vue": "^3.5.25",
     "vue-router": "^4.6.3"
   },

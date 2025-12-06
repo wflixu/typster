@@ -30,6 +30,28 @@
       ]
     },
     {
+      "identifier": "fs:allow-read-text-file",
+      "allow": [
+        {
+          "path": "$HOME/**/*"
+        },
+        {
+          "path": "$HOME/**"
+        }
+      ]
+    },
+    {
+      "identifier": "fs:allow-write-text-file",
+      "allow": [
+        {
+          "path": "$HOME/**/*"
+        },
+        {
+          "path": "$HOME/**"
+        }
+      ]
+    },
+    {
       "identifier": "fs:allow-read-file",
       "allow": [
         {

@@ -4,7 +4,6 @@ import 'primeicons/primeicons.css'
 
 import "./style/styles.css";
 
-import "./shared/monaco-hook";
 
 import TodayUI from "today-ui";
 

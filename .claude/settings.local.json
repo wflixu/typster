@@ -12,7 +12,9 @@
       "Bash(xargs kill:*)",
       "Bash(pnpm run td:*)",
       "Bash(pnpm install:*)",
-      "Bash(pnpm start:*)"
+      "Bash(pnpm start:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ],
     "deny": [],
     "ask": []
