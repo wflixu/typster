@@ -8,6 +8,8 @@
 import { onMounted, onUnmounted, ref, watch } from 'vue'
 import { useEditor, EditorContent } from '@tiptap/vue-3'
 import StarterKit from '@tiptap/starter-kit'
+import { TaskItem, TaskList } from '@tiptap/extension-list'
+import CodeBlock from '@tiptap/extension-code-block'
 import { Markdown } from '@tiptap/markdown';
 import { useSystemStoreHook } from '../../store/store';
 import { readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
@@ -38,6 +40,11 @@ const editor = useEditor({
     contentType: 'markdown',
     extensions: [
         StarterKit,
+        TaskList,
+        TaskItem.configure({
+          nested: true,
+        }),
+        CodeBlock,
         Markdown.configure({
             html: false, // 不使用HTML输入
             transformPastedText: true, // 自动转换粘贴的文本为Markdown

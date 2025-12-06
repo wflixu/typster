@@ -24,9 +24,25 @@ html {
   height: 100%;
 }
 
-.tiptap-editor>.tiptap {
+.tiptap-editor > .tiptap {
   outline: none;
   min-height: 100%;
   width: 100%;
+
+  pre {
+    background: var(--black);
+    border-radius: 0.5rem;
+    color: var(--white);
+    font-family: 'JetBrainsMono', monospace;
+    margin: 1.5rem 0;
+    padding: 0.75rem 1rem;
+
+    code {
+      background: none;
+      color: inherit;
+      font-size: 1rem;
+      padding: 0;
+    }
+  }
 
 }
