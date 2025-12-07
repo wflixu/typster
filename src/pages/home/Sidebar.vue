@@ -36,10 +36,15 @@
       </div>
       <template v-if="isToc">
         <div class="toc">
-          <div @click="() => onClickTocItem(item)" class="toc-item" v-for="item in tocList" :key="item.id"
-            :class="[`level-${item.level}`, item.isActive ? 'active' : '', item.isScrolledOver ? 'scrolled-over' : '']">
+          <a :href="'#' + item.id" @click.prevent="() => onClickTocItem(item)" class="toc-item" v-for="item in tocList"
+            :key="item.id" :class="{
+              'is-active': item.isActive && !item.isScrolledOver,
+              'is-scrolled-over': item.isScrolledOver,
+            }" :style="{ '--level': item.level }"
+            :data-item-index="item.itemIndex"
+            >
             {{ item.textContent }}
-          </div>
+          </a>
         </div>
       </template>
       <template v-else>
@@ -417,27 +422,22 @@ onMounted(() => {
       display: flex;
       align-items: center;
       padding: 0 8px;
+      color: #666;
+      text-decoration: none;
       cursor: pointer;
+      padding-left: calc(0.875rem * (var(--level) - 1));
     }
 
-    .toc-item.active {
+    .toc-item:hover {
+      color: lightskyblue;
+    }
+
+    .toc-item.is-active {
       background-color: bisque;
     }
 
-    .toc-item.level-2 {
-      padding-left: 24px;
-    }
-
-    .toc-item.level-3 {
-      padding-left: 40px;
-    }
-
-    .toc-item.level-4 {
-      padding-left: 56px;
-    }
-
-    .toc-item.level-5 {
-      padding-left: 70px;
+    .toc-item.is-scrolled-over {
+      font-weight: bold;
     }
 
   }

@@ -5,3 +5,8 @@ export interface IEditingInfo {
     cursorCol: number;
 }
 export type SidebarType = 'file' | 'toc'
+
+export interface IProject {
+    title: string;
+    path: string;
+}

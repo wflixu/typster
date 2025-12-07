@@ -1,17 +1,12 @@
 import { RouteRecordRaw, createRouter, createWebHashHistory } from "vue-router";
 import Home from "./pages/home/Home.vue";
-import Project from "./pages/project/Project.vue";
 // const AsyncHome =
 const routes = [
-  { path: "/", redirect: "/project" },
+  { path: "/", redirect: "/home" },
   {
     path: "/home",
     component: Home,
-  },
-  {
-    path: "/project",
-    component: Project,
-  },
+  }
 ];
 
 const router = createRouter({

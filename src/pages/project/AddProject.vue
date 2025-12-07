@@ -23,8 +23,8 @@ import { reactive, ref } from 'vue';
 import { open as openDialog } from '@tauri-apps/plugin-dialog';
 import { appDataDir } from '@tauri-apps/api/path';
 import { message } from 'ant-design-vue';
-import { IProject } from './interface';
 import { useSystemStoreHook } from '../../store/store';
+import { IProject } from '../../shared/interface';
 
 const open = defineModel('open', { type: Boolean, default: false })
 const emit = defineEmits<{

@@ -14,7 +14,7 @@ import { useSystemStoreHook } from '../../store/store';
 import { readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
 import { showSaveChanges, showFileError } from '../../utils/dialog-utils';
 import { debounce } from '../../shared/util'
-import { TableOfContents, getLinearIndexes } from '@tiptap/extension-table-of-contents'
+import { TableOfContents, getHierarchicalIndexes, getLinearIndexes } from '@tiptap/extension-table-of-contents'
 import { EventBus } from '../../shared/EventBus'
 import { TextSelection } from '@tiptap/pm/state'
 
@@ -58,19 +58,20 @@ const editor = useEditor({
         TaskItem.configure({
             nested: true,
         }),
-        Markdown.configure({
-            html: false, // 不使用HTML输入
-            transformPastedText: true, // 自动转换粘贴的文本为Markdown
-            transformCopiedText: false, // 复制时不转换
-            breaks: true, // 支持换行符
-        }),
         TableOfContents.configure({
             anchorTypes: ['heading'],
             onUpdate: content => {
                 debouncedUpdateToc(content);
             },
 
-        })
+        }),
+        Markdown.configure({
+            html: false, // 不使用HTML输入
+            transformPastedText: true, // 自动转换粘贴的文本为Markdown
+            transformCopiedText: false, // 复制时不转换
+            breaks: true, // 支持换行符
+        }),
+        
     ],
     onUpdate: () => {
         updateStatistics()
@@ -270,11 +271,6 @@ const handleSelectTocItem = ({ id }: { id: string }) => {
 
     editor.value.view.focus()
 
-
-    containerRef.value?.scrollTo({
-        top: element.getBoundingClientRect().top + window.scrollY,
-        behavior: 'smooth',
-    })
 };
 
 onMounted(() => {
