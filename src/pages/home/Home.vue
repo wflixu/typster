@@ -64,7 +64,7 @@ main.expand {
     .editor {
         grid-area: editor;
         /* 展开时指定到编辑器区域 */
-       overflow-y: auto;
+        overflow: hidden;
     }
 
     .status {
@@ -78,6 +78,4 @@ main.expand {
     background-color: #f8f9fa;
     border-right: 1px solid #e1e5e9;
 }
-
-
 </style>

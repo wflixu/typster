@@ -81,6 +81,12 @@ const useSystemStoreHook = defineStore("system", () => {
     sidebarType.value = type;
   }
 
+  const toc = ref<any[]>([]);
+  const setToc = (data: any[]) => {
+    toc.value = data;
+  }
+
+
 
   return {
     loading,
@@ -104,6 +110,9 @@ const useSystemStoreHook = defineStore("system", () => {
 
     sidebarType,
     setSidebarType,
+    // toc
+    toc,
+    setToc,
   };
 });
 

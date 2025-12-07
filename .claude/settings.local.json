@@ -14,7 +14,10 @@
       "Bash(pnpm install:*)",
       "Bash(pnpm start:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(typst compile:*)",
+      "Bash(find:*)",
+      "Bash(cargo search:*)"
     ],
     "deny": [],
     "ask": []

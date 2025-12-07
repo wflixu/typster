@@ -1,25 +1,29 @@
 <template>
-    <div class="typst-editor">
+    <div class="typst-editor" ref="container">
         <editor-content :editor="editor" class="tiptap-editor" />
     </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, watch } from 'vue'
+import { nextTick, onMounted, onUnmounted, ref, toRaw, useTemplateRef, watch } from 'vue'
 import { useEditor, EditorContent } from '@tiptap/vue-3'
 import StarterKit from '@tiptap/starter-kit'
 import { TaskItem, TaskList } from '@tiptap/extension-list'
-import CodeBlock from '@tiptap/extension-code-block'
 import { Markdown } from '@tiptap/markdown';
 import { useSystemStoreHook } from '../../store/store';
 import { readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
 import { showSaveChanges, showFileError } from '../../utils/dialog-utils';
+import { debounce } from '../../shared/util'
+import { TableOfContents, getLinearIndexes } from '@tiptap/extension-table-of-contents'
+import { EventBus } from '../../shared/EventBus'
+import { TextSelection } from '@tiptap/pm/state'
 
 const systemStore = useSystemStoreHook();
 
 // 文件保存状态
 const isSaving = ref(false);
 const hasUnsavedChanges = ref(false);
+const containerRef = useTemplateRef('container')
 
 // 发送状态更新到状态栏
 const emitStatusUpdate = (type: 'saving' | 'saved' | 'loading' | 'error', text: string) => {
@@ -34,6 +38,16 @@ const emitUnsavedChangesUpdate = (hasChanges: boolean) => {
     }))
 }
 
+
+const debouncedUpdateToc = debounce((items) => {
+    console.info('update toc', toRaw(items))
+    if (!editor.value) {
+        return;
+    }
+    systemStore.setToc(items)
+
+}, 1000);
+
 // Editor - 配置编辑器，正确使用@tiptap/markdown
 const editor = useEditor({
     content: 'default content',
@@ -42,25 +56,32 @@ const editor = useEditor({
         StarterKit,
         TaskList,
         TaskItem.configure({
-          nested: true,
+            nested: true,
         }),
-        CodeBlock,
         Markdown.configure({
             html: false, // 不使用HTML输入
             transformPastedText: true, // 自动转换粘贴的文本为Markdown
             transformCopiedText: false, // 复制时不转换
             breaks: true, // 支持换行符
+        }),
+        TableOfContents.configure({
+            anchorTypes: ['heading'],
+            onUpdate: content => {
+                debouncedUpdateToc(content);
+            },
+
         })
     ],
     onUpdate: () => {
         updateStatistics()
         updateCursorPosition()
         hasUnsavedChanges.value = true
-        emitUnsavedChangesUpdate(true)
+        emitUnsavedChangesUpdate(true);
     },
     onSelectionUpdate: () => {
         updateCursorPosition()
     },
+
     editorProps: {
         attributes: {
             spellcheck: 'false',
@@ -225,10 +246,46 @@ const handleBeforeUnload = (event: BeforeUnloadEvent) => {
         // 现代浏览器不需要设置returnValue
     }
 };
+
+const handleSelectTocItem = ({ id }: { id: string }) => {
+    if (!editor.value) {
+        return;
+    }
+
+    console.info(id);
+
+    const element = editor.value.view.dom.querySelector(`[data-toc-id="${id}"`)
+    if (!element) {
+        console.warn('not find dom width id: ', id)
+        return;
+    }
+    const pos = editor.value.view.posAtDOM(element, 0)
+
+    // set focus
+    const tr = editor.value.view.state.tr
+
+    tr.setSelection(new TextSelection(tr.doc.resolve(pos)))
+
+    editor.value.view.dispatch(tr)
+
+    editor.value.view.focus()
+
+
+    containerRef.value?.scrollTo({
+        top: element.getBoundingClientRect().top + window.scrollY,
+        behavior: 'smooth',
+    })
+};
+
 onMounted(() => {
-    updateStatistics()
     window.addEventListener('beforeunload', handleBeforeUnload);
     window.addEventListener('keydown', handleKeyDown);
+    nextTick(() => {
+        updateStatistics()
+        // debouncedUpdateToc();
+    })
+
+    EventBus.on('select-toc-item', handleSelectTocItem);
 })
 
 onUnmounted(() => {
@@ -238,6 +295,8 @@ onUnmounted(() => {
     if (saveTimeout) {
         clearTimeout(saveTimeout);
     }
+
+    EventBus.off('select-toc-item', handleSelectTocItem);
 })
 </script>
 
@@ -245,7 +304,8 @@ onUnmounted(() => {
 .typst-editor {
     background: #ffffff;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    overflow: hidden;
+    overflow-y: auto;
+    height: 100%;
 }
 
 
@@ -255,7 +315,6 @@ onUnmounted(() => {
     font-size: 16px;
     color: #2c3e50;
     padding: 40px 60px;
-    overflow-y: auto;
     background: #ffffff;
 
     :deep(.tiptap) {

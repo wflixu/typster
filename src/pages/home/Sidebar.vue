@@ -34,17 +34,27 @@
         </template>
         <span></span>
       </div>
-      <ContextMenu ref="menuRef" :model="items" />
-      <Tree class="dir" v-model:selectionKeys="selectedKeys" selectionMode="single" :value="treeData"
-        @nodeSelect="onSelect">
-        <template #default="{ node }">
-          <div @contextmenu="onRightClick($event, node)">
-            <span>{{ node.label }}</span>
+      <template v-if="isToc">
+        <div class="toc">
+          <div @click="() => onClickTocItem(item)" class="toc-item" v-for="item in tocList" :key="item.id"
+            :class="[`level-${item.level}`, item.isActive ? 'active' : '', item.isScrolledOver ? 'scrolled-over' : '']">
+            {{ item.textContent }}
           </div>
-        </template>
-      </Tree>
+        </div>
+      </template>
+      <template v-else>
+        <ContextMenu ref="menuRef" :model="items" />
+        <Tree class="dir" v-model:selectionKeys="selectedKeys" selectionMode="single" :value="treeData"
+          @nodeSelect="onSelect">
+          <template #default="{ node }">
+            <div @contextmenu="onRightClick($event, node)">
+              <span>{{ node.label }}</span>
+            </div>
+          </template>
+        </Tree>
+      </template>
     </div>
-    <div class="footer">
+    <div class="footer" v-if="!isToc">
       <Button icon="pi pi-plus" aria-label="Save" size="small" @click="onCreateFile" />
       <Select :value="systemStore.editingProject?.path" size="small" :options="projects" optionLabel="title"
         option-value="path" class="w-full md:w-56" @change="onSelectProject" />
@@ -63,6 +73,7 @@ import Button from 'primevue/button';
 import ContextMenu from 'primevue/contextmenu';
 import MoveBar from '../../components/MoveBar.vue';
 import { useSystemStoreHook } from '../../store/store';
+import { EventBus } from '../../shared/EventBus';
 
 // 定义文件系统条目的类型，用于处理 Tauri fs API 返回的数据
 type FileSystemEntry = {
@@ -99,6 +110,14 @@ const projects = computed(() => {
 const menuRef = ref();
 const selectedNode = ref<TreeNode | null>(null);
 
+
+const tocList = computed(() => {
+  console.info(systemStore.toc)
+  return systemStore.toc;
+})
+const onClickTocItem = (data: Record<string, any>) => {
+  EventBus.emit('select-toc-item', data);
+}
 // 动态菜单项
 const items = computed(() => {
   if (!selectedNode.value) return [];
@@ -354,6 +373,7 @@ onMounted(() => {
 })
 
 
+
 </script>
 
 <style scoped>
@@ -384,6 +404,42 @@ onMounted(() => {
     height: calc(100% - 40px);
     padding: 8px 0;
     overflow-y: auto;
+  }
+
+  /* toc */
+  .toc {
+    overflow-y: auto;
+    padding: 16px 8px;
+    max-height: calc(100vh - 80px);
+
+    .toc-item {
+      height: 36px;
+      display: flex;
+      align-items: center;
+      padding: 0 8px;
+      cursor: pointer;
+    }
+
+    .toc-item.active {
+      background-color: bisque;
+    }
+
+    .toc-item.level-2 {
+      padding-left: 24px;
+    }
+
+    .toc-item.level-3 {
+      padding-left: 40px;
+    }
+
+    .toc-item.level-4 {
+      padding-left: 56px;
+    }
+
+    .toc-item.level-5 {
+      padding-left: 70px;
+    }
+
   }
 
   .footer {
