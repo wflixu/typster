@@ -17,7 +17,12 @@
       "Bash(git commit:*)",
       "Bash(typst compile:*)",
       "Bash(find:*)",
-      "Bash(cargo search:*)"
+      "Bash(cargo search:*)",
+      "Bash(cloc:*)",
+      "Bash(pnpm ant-design-vue:*)",
+      "Bash(pnpm ls --depth=0)",
+      "Bash(pnpm build:*)",
+      "Bash(cat:*)"
     ],
     "deny": [],
     "ask": []

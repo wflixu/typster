@@ -25,7 +25,6 @@ const components = {
 export const setupUILib: Plugin = {
     install(app, options) {
         Object.entries(components).forEach(([key, val]) => {
-            console.log(key, val);
             app.component(key, val);
         })
     }

@@ -1,9 +1,8 @@
 import { createPinia, defineStore } from "pinia";
 import { reactive, ref, } from "vue";
-import { IProject } from "../pages/project/interface";
+import { IProject } from "../shared/interface";
 import { IMode } from "../pages/typst/interface";
 import { IEditingInfo, SidebarType } from "../shared/interface";
-import { set } from "radash";
 
 const pinia = createPinia();
 const EDITING_FILE = "EDITING_FILE";

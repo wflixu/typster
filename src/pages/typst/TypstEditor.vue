@@ -17,6 +17,8 @@ import { debounce } from '../../shared/util'
 import { TableOfContents, getHierarchicalIndexes, getLinearIndexes } from '@tiptap/extension-table-of-contents'
 import { EventBus } from '../../shared/EventBus'
 import { TextSelection } from '@tiptap/pm/state'
+import { hasPathTraversalPattern, validateTypstFilePath } from '../../utils/path-security'
+import { handlePasteImage, getTypstImageSyntax } from '../../utils/image-handler'
 
 const systemStore = useSystemStoreHook();
 
@@ -65,13 +67,8 @@ const editor = useEditor({
             },
 
         }),
-        Markdown.configure({
-            html: false, // 不使用HTML输入
-            transformPastedText: true, // 自动转换粘贴的文本为Markdown
-            transformCopiedText: false, // 复制时不转换
-            breaks: true, // 支持换行符
-        }),
-        
+        Markdown,
+
     ],
     onUpdate: () => {
         updateStatistics()
@@ -87,14 +84,73 @@ const editor = useEditor({
         attributes: {
             spellcheck: 'false',
         },
+        handlePaste: (_view, event) => {
+            // 处理图片粘贴
+            handleImagePaste(event);
+            // 返回 false 让 Tiptap 继续处理其他粘贴内容
+            return false;
+        },
     },
 })
+
+// 处理图片粘贴事件
+const handleImagePaste = async (event: Event) => {
+    const clipboardEvent = event as ClipboardEvent;
+
+    // 检查是否有粘贴内容
+    if (!clipboardEvent.clipboardData) {
+        return;
+    }
+
+    try {
+        // 尝试处理图片粘贴
+        const imagePath = await handlePasteImage(clipboardEvent);
+
+        if (imagePath && editor.value) {
+            // 阻止默认行为
+            event.preventDefault();
+
+            // 生成 Typst 图片语法
+            const imageSyntax = getTypstImageSyntax(imagePath);
+
+            // 在光标位置插入图片语法
+            editor.value.view.dispatch(
+                editor.value.state.tr.insertText(imageSyntax)
+            );
+
+            // 显示状态提示
+            emitStatusUpdate('saved', '图片已插入');
+
+            // 标记为有未保存的更改
+            hasUnsavedChanges.value = true;
+            emitUnsavedChangesUpdate(true);
+        }
+    } catch (error) {
+        console.error('处理图片粘贴失败:', error);
+        emitStatusUpdate('error', '插入图片失败');
+    }
+}
 
 // 文件操作函数
 const loadFileContent = async (filePath: string) => {
     if (!filePath || !editor.value) return;
 
     try {
+        // 安全验证：检查路径穿越
+        if (hasPathTraversalPattern(filePath)) {
+            console.error('安全警告: 检测到路径穿越攻击尝试', filePath);
+            emitStatusUpdate('error', '安全警告：路径不合法');
+            return;
+        }
+
+        // 验证文件路径是否在项目范围内
+        const projectPath = systemStore.editingProject?.path;
+        if (projectPath && !validateTypstFilePath(filePath, projectPath)) {
+            console.error('安全警告: 文件路径验证失败', filePath);
+            emitStatusUpdate('error', '安全警告：文件路径验证失败');
+            return;
+        }
+
         emitStatusUpdate('loading', '加载中...');
         console.log('Loading file:', filePath);
         const content = await readTextFile(filePath);
@@ -122,6 +178,20 @@ const loadFileContent = async (filePath: string) => {
 
 const saveCurrentFile = async () => {
     if (!systemStore.editingFilePath || !editor.value || isSaving.value) return;
+
+    // 安全验证：检查路径穿越
+    if (hasPathTraversalPattern(systemStore.editingFilePath)) {
+        console.error('安全警告: 检测到路径穿越攻击尝试', systemStore.editingFilePath);
+        emitStatusUpdate('error', '安全警告：路径不合法');
+        return;
+    }
+
+    const projectPath = systemStore.editingProject?.path;
+    if (projectPath && !validateTypstFilePath(systemStore.editingFilePath, projectPath)) {
+        console.error('安全警告: 文件路径验证失败', systemStore.editingFilePath);
+        emitStatusUpdate('error', '安全警告：文件路径验证失败');
+        return;
+    }
 
     isSaving.value = true;
     emitStatusUpdate('saving', '保存中...');

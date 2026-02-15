@@ -22,9 +22,11 @@
 import { reactive, ref } from 'vue';
 import { open as openDialog } from '@tauri-apps/plugin-dialog';
 import { appDataDir } from '@tauri-apps/api/path';
-import { message } from 'ant-design-vue';
+import { useToast } from 'primevue/usetoast';
 import { useSystemStoreHook } from '../../store/store';
-import { IProject } from '../../shared/interface';
+import type { IProject } from '../../shared/interface';
+
+const toast = useToast();
 
 const open = defineModel('open', { type: Boolean, default: false })
 const emit = defineEmits<{
@@ -67,7 +69,12 @@ const handleOk = () => {
         emit('finish')
         resetProject()
     } else {
-        message.warn("请填写完整");
+        toast.add({
+            severity: 'warn',
+            summary: '警告',
+            detail: '请填写完整',
+            life: 3000
+        });
         loading.value = false;
     }
 };

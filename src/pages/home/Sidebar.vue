@@ -79,6 +79,7 @@ import ContextMenu from 'primevue/contextmenu';
 import MoveBar from '../../components/MoveBar.vue';
 import { useSystemStoreHook } from '../../store/store';
 import { EventBus } from '../../shared/EventBus';
+import { validateTypstFilePath, hasPathTraversalPattern, sanitizePath } from '../../utils/path-security';
 
 // 定义文件系统条目的类型，用于处理 Tauri fs API 返回的数据
 type FileSystemEntry = {
@@ -305,6 +306,18 @@ const handleRename = async (node: TreeNode) => {
     });
 
     if (filePath && filePath !== node.key) {
+      // 安全验证：检查新路径是否安全
+      if (hasPathTraversalPattern(filePath)) {
+        console.error('安全警告: 检测到路径穿越攻击尝试', filePath);
+        return;
+      }
+
+      const projectPath = systemStore.editingProject?.path;
+      if (projectPath && !validateTypstFilePath(filePath, projectPath)) {
+        console.error('安全警告: 文件路径验证失败', filePath);
+        return;
+      }
+
       await rename(node.key as string, filePath);
 
       // 如果重命名的文件是当前编辑的文件，更新编辑路径
@@ -328,7 +341,20 @@ const handleDelete = async (node: TreeNode) => {
   if (!confirmDelete) return;
 
   try {
-    await remove(node.key as string);
+    // 安全验证：检查路径是否安全
+    const filePath = node.key as string;
+    if (hasPathTraversalPattern(filePath)) {
+      console.error('安全警告: 检测到路径穿越攻击尝试', filePath);
+      return;
+    }
+
+    const projectPath = systemStore.editingProject?.path;
+    if (projectPath && !validateTypstFilePath(filePath, projectPath)) {
+      console.error('安全警告: 文件路径验证失败', filePath);
+      return;
+    }
+
+    await remove(filePath);
 
     // 如果删除的是当前编辑的文件，清空编辑器
     if (systemStore.editingFilePath === node.key) {
@@ -345,20 +371,44 @@ const onSelect = (node: TreeNode) => {
   console.info(node)
   systemStore.setEditingFilePath(node.key as string)
 }
+
 const onCreateFile = async () => {
+  const projectPath = systemStore.editingProject?.path;
+  if (!projectPath) {
+    console.error('错误: 未选择项目');
+    return;
+  }
+
   const filePath = await save({
     title: "新建文件",
     filters: [{
       name: 'untitled',
       extensions: ['typ', 'bib', 'yml', 'yaml', 'md']
     }],
-    defaultPath: systemStore.editingProject?.path
+    defaultPath: projectPath
 
   });
-  console.warn(filePath)
+
   if (filePath) {
-    await writeTextFile(filePath, ' ');
-    await initFiles();
+    // 安全验证：检查新文件路径
+    try {
+      const sanitizedPath = sanitizePath(filePath);
+
+      if (hasPathTraversalPattern(filePath)) {
+        console.error('安全警告: 检测到路径穿越攻击尝试', filePath);
+        return;
+      }
+
+      if (!validateTypstFilePath(filePath, projectPath)) {
+        console.error('安全警告: 文件路径必须在项目范围内', filePath);
+        return;
+      }
+
+      await writeTextFile(sanitizedPath, ' ');
+      await initFiles();
+    } catch (error) {
+      console.error('创建文件失败:', error);
+    }
   }
 }
 
