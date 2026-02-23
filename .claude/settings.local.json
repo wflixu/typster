@@ -22,7 +22,8 @@
       "Bash(pnpm ant-design-vue:*)",
       "Bash(pnpm ls --depth=0)",
       "Bash(pnpm build:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(ls:*)"
     ],
     "deny": [],
     "ask": []
