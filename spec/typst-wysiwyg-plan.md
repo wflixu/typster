@@ -1,12 +1,51 @@
 # 实现计划：基于 Tiptap 的 Typst WYSIWYG 编辑器
 
+## 🎯 目标
+
+用 Tiptap 构建 Typst 的 WYSIWYG 编辑器。Tiptap 本身是为富文本（HTML/Markdown）设计的，但它的底层 ProseMirror 提供了强大的**文档模型**和**扩展机制**，理论上可以表示任意结构化内容——包括 Typst 的文档。因此，我们可以将 Tiptap 改造为一个 Typst 编辑器，核心是让 ProseMirror 的文档模型能够精确映射 Typst 的抽象语法树（AST），并实现双向转换（源码 ↔ 模型）。
+
 ## 上下文
 
 ### 背景
 
-参考 [spec/editor.md](spec/editor.md) 中的技术方案，本项目旨在将 Typster 从基础的 Markdown 编辑器改造为完整的 Typst WYSIWYG 编辑器。核心思路是利用 Tiptap 底层的 ProseMirror 提供的强大文档模型和扩展机制，精确映射 Typst 的抽象语法树（AST），并实现双向转换（源码 ↔ 模型）。
+本项目旨在将 Typster 从基础的 Markdown 编辑器改造为完整的 Typst WYSIWYG 编辑器。核心思路是利用 Tiptap 底层的 ProseMirror 提供的强大文档模型和扩展机制，精确映射 Typst 的抽象语法树（AST），并实现双向转换（源码 ↔ 模型）。
 
-### 技术架构
+### 技术架构（Mermaid 图）
+
+```mermaid
+flowchart LR
+    subgraph "前端编辑器 Tiptap ProseMirror"
+        A["ProseMirror 文档模型<br>自定义 Schema"]
+        B["Tiptap 扩展<br>Typst 节点 标记"]
+        C["用户交互<br>点击 输入 拖拽"]
+    end
+
+    subgraph "双向转换层"
+        D["Typst 解析器<br>typst-syntax crate"]
+        E["Typst 序列化器<br>JS 实现"]
+    end
+
+    subgraph "渲染与预览"
+        F["Typst 编译器<br>Rust 后端"]
+        G["PDF Canvas 预览"]
+    end
+
+    C --> B --> A
+    A -- "导出为 Typst 源码" --> E --> F --> G
+    G -. "点击预览定位源码" .-> A
+    F -. "编译结果用于验证" .-> E
+    D -- "导入 Typst 源码" --> A
+```
+
+**架构说明：**
+
+| 层级 | 技术栈 | 职责 |
+|------|--------|------|
+| **前端编辑器** | Vue + Tiptap + ProseMirror | 文档模型、用户交互、UI 渲染 |
+| **双向转换层** | Rust typst-syntax + JS 序列化器 | Typst ↔ ProseMirror 互转 |
+| **渲染与预览** | Typst 编译器 + Tauri IPC | PDF/图片生成、实时预览 |
+
+### 技术架构（详细）
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -88,13 +127,14 @@ typst-html = "0.14.0"      # HTML 导出（可选）
 
 ### 参考资源
 
-- **typst.ts**: [https://github.com/Myriad-Dreamin/typst.ts](https://github.com/Myriad-Dreamin/typst.ts) - Typst 编译器 WASM 绑定（可选参考）
+- **typst.ts**: [https://github.com/Myriad-Dreamin/typst.ts](https://github.com/Myriad-Dreamin/typst.ts) - Typst 编译器 WASM 绑定（可选参考，用于纯前端方案）
+- **Tauri + Rust**: 使用 Rust 后端的 typst crates，提供完整功能支持
 
 ## 核心设计原理
 
 ### ProseMirror Schema 映射 Typst 文档结构
 
-根据 [spec/editor.md](spec/editor.md) 的设计，Typst 文档元素需要精确映射为 ProseMirror 的**节点（Node）**和**标记（Mark）**：
+根据 [spec/editor.md](editor.md) 的设计，Typst 文档元素需要精确映射为 ProseMirror 的**节点（Node）**和**标记（Mark）**：
 
 **块级节点（Node）：**
 - `heading` - 标题（`=`, `==`, `===` 等）
@@ -201,6 +241,25 @@ const doc = astToProseMirror(ast, schema)
 - **前端**：遍历 ProseMirror 文档树，生成 Typst 源码
 - **后端验证**：可选地使用 `typst-syntax` 验证生成的源码
 
+**解析方案选择：**
+
+有两种主要方案可以选择：
+
+1. **Rust 后端解析（推荐）**：
+   - 使用 `typst-syntax` crate 在后端解析
+   - 通过 IPC 传递 AST 给前端
+   - 优点：解析准确、性能好、与官方一致
+   - 缺点：需要 IPC 通信
+
+2. **WASM 前端解析（备选）**：
+   - 将 `typst-syntax` 编译为 WebAssembly
+   - 前端直接调用解析函数
+   - 优点：无需 IPC、响应快
+   - 缺点：WASM 文件较大、内存占用高
+   - 参考：[typst.ts](https://github.com/Myriad-Dreamin/typst.ts) 项目
+
+本项目采用 **Rust 后端解析方案**，充分利用已有的 Tauri 后端架构。
+
 ### Tiptap 扩展设计模式
 
 每个 Typst 元素对应一个 Tiptap 扩展，包含：
@@ -222,7 +281,7 @@ const doc = astToProseMirror(ast, schema)
 
 #### 技术要点
 
-基于 [spec/editor.md](spec/editor.md) 的扩展设计模式，每个扩展需要：
+基于 [spec/editor.md](editor.md) 的扩展设计模式，每个扩展需要：
 1. **定义 Schema**：声明节点/标记结构和属性
 2. **parseDOM/toDOM**：HTML 交互（用于粘贴等场景）
 3. **addCommands**：编辑命令
@@ -233,25 +292,25 @@ const doc = astToProseMirror(ast, schema)
 #### 需要创建的文件
 
 **扩展系统核心：**
-1. **[src/components/tiptap-editor/extensions/index.ts](src/components/tiptap-editor/extensions/index.ts)** - 扩展导出入口
-2. **[src/components/tiptap-editor/extensions/TypstExtension.ts](src/components/tiptap-editor/extensions/TypstExtension.ts)** - 基础扩展类
-3. **[src/components/tiptap-editor/extensions/TypstParser.ts](src/components/tiptap-editor/extensions/TypstParser.ts)** - Typst → ProseMirror 解析器
-4. **[src/components/tiptap-editor/extensions/TypstSerializer.ts](src/components/tiptap-editor/extensions/TypstSerializer.ts)** - ProseMirror → Typst 序列化器
+1. [src/components/tiptap-editor/extensions/index.ts](src/components/tiptap-editor/extensions/index.ts) - 扩展导出入口
+2. [src/components/tiptap-editor/extensions/TypstExtension.ts](src/components/tiptap-editor/extensions/TypstExtension.ts) - 基础扩展类
+3. [src/components/tiptap-editor/extensions/TypstParser.ts](src/components/tiptap-editor/extensions/TypstParser.ts) - Typst → ProseMirror 解析器
+4. [src/components/tiptap-editor/extensions/TypstSerializer.ts](src/components/tiptap-editor/extensions/TypstSerializer.ts) - ProseMirror → Typst 序列化器
 
 **节点扩展：**
-5. **[src/components/tiptap-editor/extensions/nodes/TypstHeading.ts](src/components/tiptap-editor/extensions/nodes/TypstHeading.ts)** - 标题节点（`=`, `==`, `===` 等）
-6. **[src/components/tiptap-editor/extensions/nodes/TypstParagraph.ts](src/components/tiptap-editor/extensions/nodes/TypstParagraph.ts)** - 段落节点
-7. **[src/components/tiptap-editor/extensions/nodes/TypstCodeBlock.ts](src/components/tiptap-editor/extensions/nodes/TypstCodeBlock.ts)** - 代码块节点
+5. [src/components/tiptap-editor/extensions/nodes/TypstHeading.ts](src/components/tiptap-editor/extensions/nodes/TypstHeading.ts) - 标题节点（`=`, `==`, `===` 等）
+6. [src/components/tiptap-editor/extensions/nodes/TypstParagraph.ts](src/components/tiptap-editor/extensions/nodes/TypstParagraph.ts) - 段落节点
+7. [src/components/tiptap-editor/extensions/nodes/TypstCodeBlock.ts](src/components/tiptap-editor/extensions/nodes/TypstCodeBlock.ts) - 代码块节点
 
 **标记扩展：**
-8. **[src/components/tiptap-editor/extensions/marks/TypstStrong.ts](src/components/tiptap-editor/extensions/marks/TypstStrong.ts)** - 粗体标记（`*text*`）
-9. **[src/components/tiptap-editor/extensions/marks/TypstEmph.ts](src/components/tiptap-editor/extensions/marks/TypstEmph.ts)** - 斜体标记（`_text_`）
-10. **[src/components/tiptap-editor/extensions/marks/TypstRaw.ts](src/components/tiptap-editor/extensions/marks/TypstRaw.ts)** - 行内代码标记
+8. [src/components/tiptap-editor/extensions/marks/TypstStrong.ts](src/components/tiptap-editor/extensions/marks/TypstStrong.ts) - 粗体标记（`*text*`）
+9. [src/components/tiptap-editor/extensions/marks/TypstEmph.ts](src/components/tiptap-editor/extensions/marks/TypstEmph.ts) - 斜体标记（`_text_`）
+10. [src/components/tiptap-editor/extensions/marks/TypstRaw.ts](src/components/tiptap-editor/extensions/marks/TypstRaw.ts) - 行内代码标记
 
 #### 需要修改的文件
 
-1. **[src/pages/typst/TypstEditor.vue](src/pages/typst/TypstEditor.vue)** - 集成新扩展系统
-2. **[src/store/store.ts](src/store/store.ts)** - 添加编辑器模式状态
+1. [src/pages/typst/TypstEditor.vue](src/pages/typst/TypstEditor.vue) - 集成新扩展系统
+2. [src/store/store.ts](src/store/store.ts) - 添加编辑器模式状态
 
 #### 实现要点
 
@@ -625,16 +684,16 @@ const renderMath = async (syntax: string, displayMode: boolean) => {
 ```
 
 **优势：**
-- ✅ SVG 格式可缩放，不损失清晰度
-- ✅ 文件比 PNG 小
-- ✅ 可以选择文本（SVG 内嵌文本）
-- ✅ 后端统一处理，前端简化
+- SVG 格式可缩放，不损失清晰度
+- 文件比 PNG 小
+- 可以选择文本（SVG 内嵌文本）
+- 后端统一处理，前端简化
 
 #### 需要创建的文件
 
-1. **[src/components/tiptap-editor/extensions/nodes/TypstMath.ts](src/components/tiptap-editor/extensions/nodes/TypstMath.ts)** - 数学公式节点
-2. **[src/components/math-renderer/MathNodeView.ts](src/components/math-renderer/MathNodeView.ts)** - 数学公式节点视图
-3. **[src/components/math-renderer/MathRenderer.vue](src/components/math-renderer/MathRenderer.vue)** - 数学公式渲染组件
+1. [src/components/tiptap-editor/extensions/nodes/TypstMath.ts](src/components/tiptap-editor/extensions/nodes/TypstMath.ts) - 数学公式节点
+2. [src/components/math-renderer/MathNodeView.ts](src/components/math-renderer/MathNodeView.ts) - 数学公式节点视图
+3. [src/components/math-renderer/MathRenderer.vue](src/components/math-renderer/MathRenderer.vue) - 数学公式渲染组件
 
 #### TypstMathInline.ts 实现
 
@@ -950,7 +1009,7 @@ export const mathCache = new MathCache()
 
 #### 后端扩展
 
-在 **[src-tauri/src/cmds/typst.rs](src-tauri/src/cmds/typst.rs)** 添加：
+在 [src-tauri/src/cmds/typst.rs](src-tauri/src/cmds/typst.rs) 添加：
 
 ```rust
 #[command]
@@ -977,10 +1036,10 @@ pub async fn typst_compile_math(syntax: String) -> Result<MathRenderResult, AppE
 
 #### 需要创建的文件
 
-1. **[src/components/tiptap-editor/extensions/nodes/TypstBulletList.ts](src/components/tiptap-editor/extensions/nodes/TypstBulletList.ts)** - 无序列表（`- item`）
-2. **[src/components/tiptap-editor/extensions/nodes/TypstOrderedList.ts](src/components/tiptap-editor/extensions/nodes/TypstOrderedList.ts)** - 有序列表（`+ item` 或 `1. item`）
-3. **[src/components/tiptap-editor/extensions/nodes/TypstTable.ts](src/components/tiptap-editor/extensions/nodes/TypstTable.ts)** - 表格支持
-4. **[src/components/tiptap-editor/extensions/nodes/TypstFigure.ts](src/components/tiptap-editor/extensions/nodes/TypstFigure.ts)** - 图片和图表
+1. [src/components/tiptap-editor/extensions/nodes/TypstBulletList.ts](src/components/tiptap-editor/extensions/nodes/TypstBulletList.ts) - 无序列表（`- item`）
+2. [src/components/tiptap-editor/extensions/nodes/TypstOrderedList.ts](src/components/tiptap-editor/extensions/nodes/TypstOrderedList.ts) - 有序列表（`+ item` 或 `1. item`）
+3. [src/components/tiptap-editor/extensions/nodes/TypstTable.ts](src/components/tiptap-editor/extensions/nodes/TypstTable.ts) - 表格支持
+4. [src/components/tiptap-editor/extensions/nodes/TypstFigure.ts](src/components/tiptap-editor/extensions/nodes/TypstFigure.ts) - 图片和图表
 
 #### 实现要点
 
@@ -1015,7 +1074,7 @@ serialize(doc: ProseMirrorNode): string {
 
 #### 预览策略（参考 spec/editor.md）
 
-根据 [spec/editor.md](spec/editor.md) 的讨论，有三种预览策略：
+根据 [spec/editor.md](editor.md) 的讨论，有三种预览策略：
 
 1. **直接渲染**：在编辑器内用 HTML+CSS 模拟 Typst 样式
    - 优点：易实现，响应快
@@ -1041,14 +1100,14 @@ type PreviewMode = 'wysiwyg' | 'split' | 'preview'
 
 #### 需要创建的文件
 
-1. **[src/components/preview/PreviewPanel.vue](src/components/preview/PreviewPanel.vue)** - 预览面板组件
-2. **[src/components/preview/PreviewController.ts](src/components/preview/PreviewController.ts)** - 预览控制器
-3. **[src/components/preview/WysiwygRenderer.ts](src/components/preview/WysiwygRenderer.ts)** - WYSIWYG 样式渲染器
+1. [src/components/preview/PreviewPanel.vue](src/components/preview/PreviewPanel.vue) - 预览面板组件
+2. [src/components/preview/PreviewController.ts](src/components/preview/PreviewController.ts) - 预览控制器
+3. [src/components/preview/WysiwygRenderer.ts](src/components/preview/WysiwygRenderer.ts) - WYSIWYG 样式渲染器
 
 #### 需要修改的文件
 
-1. **[src/pages/typst/TypstEditor.vue](src/pages/typst/TypstEditor.vue)** - 添加预览面板和模式切换
-2. **[src/store/store.ts](src/store/store.ts)** - 添加预览模式状态
+1. [src/pages/typst/TypstEditor.vue](src/pages/typst/TypstEditor.vue) - 添加预览面板和模式切换
+2. [src/store/store.ts](src/store/store.ts) - 添加预览模式状态
 
 #### 实现要点
 
@@ -1371,12 +1430,78 @@ export const typstStyles = `
 `
 ```
 
-**4. 后端已支持：**
+**4. 点击预览定位源码（双向映射）：**
+
+实现"点击预览定位源码"需要前端与编译器协作：
+
+```typescript
+// 预览渲染时，每个元素携带其在源码中的位置信息
+interface PageWithSourceMap {
+  num: number
+  width: number
+  height: number
+  image: string
+  sourceMap: SourceLocation[]  // 源码位置映射
+}
+
+interface SourceLocation {
+  x: number        // 预览中的 X 坐标
+  y: number        // 预览中的 Y 坐标
+  width: number    // 区域宽度
+  height: number   // 区域高度
+  sourceStart: number  // 源码起始位置
+  sourceEnd: number    // 源码结束位置
+}
+
+// 点击预览页面
+const handlePageClick = (page: Page, event: MouseEvent) => {
+  const x = event.offsetX
+  const y = event.offsetY
+
+  // 查找对应的源码位置
+  const location = page.sourceMap.find(loc =>
+    x >= loc.x && x <= loc.x + loc.width &&
+    y >= loc.y && y <= loc.y + loc.height
+  )
+
+  if (location) {
+    // 在编辑器中高亮对应的源码范围
+    highlightSourceRange(location.sourceStart, location.sourceEnd)
+    // 将光标定位到该位置
+    setCursorPosition(location.sourceStart)
+  }
+}
+```
+
+**后端扩展（可选）：**
+
+```rust
+// 在编译时生成源码位置映射
+#[derive(Serialize, Deserialize)]
+pub struct SourceLocation {
+    pub x: f64,
+    pub y: f64,
+    pub width: f64,
+    pub height: f64,
+    pub source_start: usize,
+    pub source_end: usize,
+}
+
+#[tauri::command]
+pub async fn typst_compile_with_source_map(
+    source: String
+) -> Result<(Vec<PageData>, Vec<SourceLocation>), String> {
+    // 编译文档并生成位置映射
+    // ...
+}
+```
+
+**5. 后端已支持：**
 
 - `typst_compile_doc` 已实现 PNG 渲染
 - 返回 `PageData[]` 包含 base64 编码的图片
 - 只需在前端显示这些图片
-- 未来可考虑添加位置信息（点击预览定位源码）
+- 未来可添加位置信息实现点击预览定位源码
 
 #### 测试验证
 
@@ -1543,18 +1668,18 @@ const updateDiagnostics = debounce(async (source: string) => {
 ```
 
 **优势：**
-- ✅ 使用官方 `typst-ide` 实现，补全准确
-- ✅ 后端统一处理，前端只负责显示
-- ✅ 支持所有 Typst 标准库和自定义函数
+- 使用官方 `typst-ide` 实现，补全准确
+- 后端统一处理，前端只负责显示
+- 支持所有 Typst 标准库和自定义函数
 
 #### 需要创建的文件
 
-1. **[src/components/autocomplete/TypstAutocomplete.vue](src/components/autocomplete/TypstAutocomplete.vue)** - 自动补全 UI
-2. **[src/components/diagnostics/DiagnosticsPanel.ts](src/components/diagnostics/DiagnosticsPanel.ts)** - 诊断信息面板
+1. [src/components/autocomplete/TypstAutocomplete.vue](src/components/autocomplete/TypstAutocomplete.vue) - 自动补全 UI
+2. [src/components/diagnostics/DiagnosticsPanel.ts](src/components/diagnostics/DiagnosticsPanel.ts) - 诊断信息面板
 
 #### 需要修改的文件
 
-1. **[src-tauri/src/cmds/typst.rs](src-tauri/src/cmds/typst.rs)** - 实现 `typst_autocomplete` 和 `typst_diagnostics`
+1. [src-tauri/src/cmds/typst.rs](src-tauri/src/cmds/typst.rs) - 实现 `typst_autocomplete` 和 `typst_diagnostics`
 
 #### 测试验证
 
@@ -1677,9 +1802,17 @@ pnpm start
 
 ---
 
-## 技术挑战与风险（参考 spec/editor.md）
+## 现有资源与挑战
 
-根据 [spec/editor.md](spec/editor.md) 的分析，本项目面临以下技术挑战：
+### 已有探索
+
+社区已经有一些尝试，可以参考借鉴：
+- **[typst.ts](https://github.com/Myriad-Dreamin/typst.ts)** - 将 Typst 编译器编译为 WASM，提供了与 Monaco Editor 的集成。可以借鉴其 WASM 绑定。
+- **[typst-vscode](https://github.com/myriad-dreamin/typst-vscode)** - VSCode 的 Typst 语言扩展，实现了语法高亮、自动补全等功能。
+
+### 核心挑战
+
+根据技术架构分析，本项目面临以下挑战：
 
 ### 1. Typst 可编程性的表示
 
@@ -1813,23 +1946,23 @@ ProseMirror 表示：
 ### 技术亮点
 
 **充分利用 Rust 后端：**
-- ✅ **typst-syntax**：官方解析器，准确解析 Typst 源码
-- ✅ **typst-ide**：官方 IDE 功能，自动补全、诊断
-- ✅ **typst-render**：官方渲染引擎，高质量输出
-- ✅ **typst-svg**：SVG 格式，可缩放，文件小
-- ✅ **typst-pdf**：官方 PDF 导出，完美兼容
+- **typst-syntax**：官方解析器，准确解析 Typst 源码
+- **typst-ide**：官方 IDE 功能，自动补全、诊断
+- **typst-render**：官方渲染引擎，高质量输出
+- **typst-svg**：SVG 格式，可缩放，文件小
+- **typst-pdf**：官方 PDF 导出，完美兼容
 
 **前端简化：**
-- ✅ ProseMirror 管理文档模型
-- ✅ Tiptap 提供扩展架构
-- ✅ Vue 3 处理 UI 交互
-- ✅ IPC 与后端高效通信
+- ProseMirror 管理文档模型
+- Tiptap 提供扩展架构
+- Vue 3 处理 UI 交互
+- IPC 与后端高效通信
 
 **性能优化：**
-- ✅ SVG 格式（可缩放，不损失清晰度）
-- ✅ 缓存机制（避免重复渲染）
-- ✅ 防抖编译（减少不必要的后端调用）
-- ✅ 增量渲染（只渲染变化部分）
+- SVG 格式（可缩放，不损失清晰度）
+- 缓存机制（避免重复渲染）
+- 防抖编译（减少不必要的后端调用）
+- 增量渲染（只渲染变化部分）
 
 ### 下一步行动
 
