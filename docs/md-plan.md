@@ -22,15 +22,321 @@
 
 | 阶段 | 内容 | 预估时间 | 优先级 |
 |------|------|----------|--------|
+| **Phase 0** | **编辑器基础功能**（设置页面、自动更新等） | **3-4 天** | **P0** |
 | Phase 1 | Markdown 语法完善 | 4-6 天 | **P0** |
 | Phase 2 | 代码高亮和表格增强 | 3-5 天 | **P0** |
 | Phase 3 | Mermaid 图表支持 | 5-7 天 | P1 |
 | Phase 4 | 高级功能和优化 | 4-6 天 | P1 |
 | Phase 5 | 导出和主题系统 | 2-3 天 | P1 |
 
-**总计**: 约 18-27 天（约 1 个月）
+**总计**: 约 21-31 天（约 1-1.5 个月）
 
 **注**：数学公式支持（KaTeX）暂不实施，留待未来版本考虑
+
+---
+
+## Phase 0: 编辑器基础功能（新增，最优先）
+
+### 目标
+构建完整的 Markdown 编辑器基础框架，包括 UI 布局、设置系统、自动保存等核心功能。
+
+### 当前状态分析
+
+**已有功能**：
+- ✅ 编辑区布局：`src/pages/home/Home.vue` (Grid 布局)
+- ✅ 状态栏：`src/pages/home/StatusBar.vue` (文件路径、字数、光标位置)
+- ✅ 侧边栏：`src/pages/home/Sidebar.vue` (文件树 + TOC 切换)
+- ✅ 自动保存：60s 防抖，键盘快捷键，卸载保护
+
+**缺失功能**：
+- ❌ 设置页面：无设置 UI 或路由
+- ❌ 自动更新：无 Tauri updater 配置
+- ❌ 部分 Markdown 扩展：表格、代码高亮、脚注等
+
+### 任务清单
+
+#### 0.1 设置页面实现（1 天）
+
+**创建文件**：
+```bash
+mkdir -p src/pages/settings
+touch src/pages/settings/Settings.vue
+touch src/pages/settings/EditorSettings.vue
+touch src/pages/settings/AppearanceSettings.vue
+touch src/pages/settings/AutosaveSettings.vue
+touch src/store/settings-store.ts
+touch src/composables/useSettings.ts
+```
+
+**Settings.vue 主容器**：
+```vue
+<template>
+  <div class="settings-page">
+    <div class="settings-header">
+      <h1>设置</h1>
+      <Button icon="pi pi-times" text @click="closeSettings" />
+    </div>
+
+    <div class="settings-content">
+      <TabMenu :model="tabs" v-model:activeIndex="activeTab" />
+
+      <div class="settings-panel">
+        <EditorSettings v-if="activeTab === 0" />
+        <AppearanceSettings v-if="activeTab === 1" />
+        <AutosaveSettings v-if="activeTab === 2" />
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+import EditorSettings from './EditorSettings.vue'
+import AppearanceSettings from './AppearanceSettings.vue'
+import AutosaveSettings from './AutosaveSettings.vue'
+
+const router = useRouter()
+const activeTab = ref(0)
+
+const tabs = [
+  { label: '编辑器', icon: 'pi pi-file-edit' },
+  { label: '外观', icon: 'pi pi-palette' },
+  { label: '自动保存', icon: 'pi pi-save' },
+]
+
+const closeSettings = () => {
+  router.back()
+}
+</script>
+```
+
+**设置状态管理**：
+```typescript
+// src/store/settings-store.ts
+import { defineStore } from 'pinia'
+import { ref, watch } from 'vue'
+
+const SETTINGS_KEY = 'typster_settings_v1'
+
+export interface EditorSettings {
+  fontSize: number
+  fontFamily: string
+  lineHeight: number
+  autoPairBrackets: boolean
+}
+
+export interface AppearanceSettings {
+  themeMode: 'light' | 'dark' | 'auto'
+  themePreset: string
+  editorWidth: number
+}
+
+export interface AutosaveSettings {
+  enabled: boolean
+  interval: number
+}
+
+export const useSettingsStore = defineStore('settings', () => {
+  const loadSettings = () => {
+    const saved = localStorage.getItem(SETTINGS_KEY)
+    return saved ? JSON.parse(saved) : null
+  }
+
+  const defaults = loadSettings()
+
+  const editor = ref<EditorSettings>({
+    fontSize: defaults?.fontSize || 16,
+    fontFamily: defaults?.fontFamily || 'system-ui',
+    lineHeight: defaults?.lineHeight || 1.6,
+    autoPairBrackets: defaults?.autoPairBrackets ?? true,
+  })
+
+  const appearance = ref<AppearanceSettings>({
+    themeMode: defaults?.themeMode || 'auto',
+    themePreset: defaults?.themePreset || 'github-light',
+    editorWidth: defaults?.editorWidth || 800,
+  })
+
+  const autosave = ref<AutosaveSettings>({
+    enabled: defaults?.enabled ?? true,
+    interval: defaults?.interval || 60,
+  })
+
+  // 持久化
+  watch([editor, appearance, autosave], () => {
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify({
+      editor: editor.value,
+      appearance: appearance.value,
+      autosave: autosave.value,
+    }))
+  }, { deep: true })
+
+  return { editor, appearance, autosave }
+})
+```
+
+**路由集成**：
+```typescript
+// src/router.ts
+import Settings from './pages/settings/Settings.vue'
+
+const routes = [
+  // ... 现有路由
+  {
+    path: '/settings',
+    name: 'Settings',
+    component: Settings,
+    meta: { title: '设置' }
+  }
+]
+```
+
+#### 0.2 自动更新机制（0.5 天）
+
+**配置 Tauri Updater**：
+```json
+// src-tauri/tauri.conf.json
+{
+  "plugins": {
+    "updater": {
+      "active": true,
+      "dialog": true,
+      "endpoints": [
+        "https://github.com/your-org/typster/releases/latest/download/latest.json"
+      ],
+      "pubkey": "your-public-key"
+    }
+  }
+}
+```
+
+**Cargo.toml 依赖**：
+```toml
+# src-tauri/Cargo.toml
+[dependencies]
+tauri-plugin-updater = "2.0"
+```
+
+**更新检查 Composable**：
+```typescript
+// src/composables/useAutoUpdate.ts
+import { check } from '@tauri-apps/plugin-updater'
+import { ask } from '@tauri-apps/api/dialog'
+import { relaunch } from '@tauri-apps/api/process'
+
+export function useAutoUpdate() {
+  const checkForUpdates = async (showNotification = false) => {
+    try {
+      const update = await check()
+
+      if (update?.available) {
+        const shouldUpdate = await ask(
+          `发现新版本 ${update.version}，是否立即下载并安装？`,
+          { title: '更新可用', kind: 'info' }
+        )
+
+        if (shouldUpdate) {
+          await update.downloadAndInstall()
+          await relaunch()
+        }
+      }
+    } catch (error) {
+      console.error('更新检查失败:', error)
+    }
+  }
+
+  const initAutoUpdate = () => {
+    setTimeout(() => checkForUpdates(false), 5000) // 启动 5 秒后检查
+  }
+
+  return { checkForUpdates, initAutoUpdate }
+}
+```
+
+**集成到主应用**：
+```typescript
+// src/App.vue
+<script setup lang="ts">
+import { onMounted } from 'vue'
+import { useAutoUpdate } from './composables/useAutoUpdate'
+
+const { initAutoUpdate } = useAutoUpdate()
+
+onMounted(() => {
+  initAutoUpdate()
+})
+</script>
+```
+
+#### 0.3 编辑器增强（1.5 天）
+
+**添加 Tiptap 扩展**：
+```typescript
+// src/pages/typst/TypstEditor.vue
+import { Table, TableRow, TableCell, TableHeader } from '@tiptap/extension-table'
+import TaskItem from '@tiptap/extension-task-item'
+import TaskList from '@tiptap/extension-task-list'
+import { CodeBlockLowlight } from '@tiptap/extension-code-block-lowlight'
+import { createLowlight, common } from 'lowlight'
+
+const lowlight = createLowlight(common)
+
+const editor = useEditor({
+  extensions: [
+    StarterKit,
+    Markdown,
+
+    // 表格支持
+    Table.configure({ resizable: true }),
+    TableRow,
+    TableCell,
+    TableHeader,
+
+    // 任务列表
+    TaskList,
+    TaskItem.configure({ nested: true }),
+
+    // 代码高亮
+    CodeBlockLowlight.configure({
+      lowlight,
+      defaultLanguage: 'text'
+    }),
+  ],
+})
+```
+
+#### 0.4 TitleBar 集成（0.25 天）
+
+**添加设置按钮点击事件**：
+```vue
+<!-- src/pages/home/TitleBar.vue -->
+<script setup lang="ts">
+import { useRouter } from 'vue-router'
+const router = useRouter()
+
+const openSettings = () => {
+  router.push('/settings')
+}
+</script>
+
+<template>
+  <div class="title-bar">
+    <button class="icon-button" @click="openSettings" aria-label="设置">
+      <i class="pi pi-cog"></i>
+    </button>
+  </div>
+</template>
+```
+
+#### 0.5 测试和验证（0.25 天）
+
+**测试清单**：
+- [ ] 设置页面可访问
+- [ ] 设置可持久化
+- [ ] 自动更新检查正常
+- [ ] 表格可创建编辑
+- [ ] 代码块支持语法高亮
 
 ---
 
@@ -45,10 +351,10 @@
 
 **创建目录结构**：
 ```bash
-mkdir -p src/components/tiptap-extensions/markdown
-mkdir -p src/components/tiptap-extensions/code
-mkdir -p src/components/tiptap-extensions/diagrams
-mkdir -p src/components/tiptap-extensions/features
+mkdir -p src/extensions/markdown
+mkdir -p src/extensions/code
+mkdir -p src/extensions/diagrams
+mkdir -p src/extensions/features
 mkdir -p src/components/outline
 mkdir -p src/styles/tokens
 mkdir -p src/composables
@@ -104,7 +410,7 @@ import './styles/components.css'         // 5. 组件样式
 
 #### 1.2 表格系统（2 天）
 
-**文件**：[src/components/tiptap-extensions/markdown/TableExtension.ts](src/components/tiptap-extensions/markdown/TableExtension.ts)
+**文件**：[src/extensions/markdown/TableExtension.ts](src/extensions/markdown/TableExtension.ts)
 
 **功能**：
 - 可视化表格编辑
@@ -180,7 +486,7 @@ const tableMenu = [
 
 #### 1.3 脚注支持（1 天）
 
-**文件**：[src/components/tiptap-extensions/markdown/FootnoteExtension.ts](src/components/tiptap-extensions/markdown/FootnoteExtension.ts)
+**文件**：[src/extensions/markdown/FootnoteExtension.ts](src/extensions/markdown/FootnoteExtension.ts)
 
 **功能**：
 - 脚注定义（`[^1]`）
@@ -235,7 +541,7 @@ export default Extension.create({
 
 #### 1.4 YAML Front Matter（0.5 天）
 
-**文件**：[src/components/tiptap-extensions/markdown/YAMLFrontMatter.ts](src/components/tiptap-extensions/markdown/YAMLFrontMatter.ts)
+**文件**：[src/extensions/markdown/YAMLFrontMatter.ts](src/extensions/markdown/YAMLFrontMatter.ts)
 
 **功能**：
 - 解析 YAML 前言
@@ -301,7 +607,7 @@ extensions: [
 
 #### 1.6 删除线和其他 GFM 语法（0.5 天）
 
-**文件**：[src/components/tiptap-extensions/markdown/GFMExtension.ts](src/components/tiptap-extensions/markdown/GFMExtension.ts)
+**文件**：[src/extensions/markdown/GFMExtension.ts](src/extensions/markdown/GFMExtension.ts)
 
 **功能**：
 - 删除线（`~~text~~`）
@@ -338,7 +644,7 @@ export default Extension.create({
 
 #### 1.7 输入规则完善（1 天）
 
-**文件**：[src/components/tiptap-extensions/markdown/MarkdownShortcuts.ts](src/components/tiptap-extensions/markdown/MarkdownShortcuts.ts)
+**文件**：[src/extensions/markdown/MarkdownShortcuts.ts](src/extensions/markdown/MarkdownShortcuts.ts)
 
 **完整的 Typora 风格输入规则**：
 ```typescript
@@ -681,7 +987,7 @@ import './styles/components.css'         // 5. 组件样式
 pnpm add shiki
 ```
 
-**文件**：[src/components/tiptap-extensions/code/CodeBlockExtension.ts](src/components/tiptap-extensions/code/CodeBlockExtension.ts)
+**文件**：[src/extensions/code/CodeBlockExtension.ts](src/extensions/code/CodeBlockExtension.ts)
 
 **实现**：
 ```typescript
@@ -974,7 +1280,7 @@ pnpm add mermaid
 
 #### 3.2 Mermaid 扩展实现（3-4 天）
 
-**文件**：[src/components/tiptap-extensions/diagrams/MermaidExtension.ts](src/components/tiptap-extensions/diagrams/MermaidExtension.ts)
+**文件**：[src/extensions/diagrams/MermaidExtension.ts](src/extensions/diagrams/MermaidExtension.ts)
 
 ```typescript
 import { Extension } from '@tiptap/core'
@@ -989,7 +1295,7 @@ export default Extension.create({
 })
 ```
 
-**文件**：[src/components/tiptap-extensions/diagrams/MermaidNode.ts](src/components/tiptap-extensions/diagrams/MermaidNode.ts)
+**文件**：[src/extensions/diagrams/MermaidNode.ts](src/extensions/diagrams/MermaidNode.ts)
 
 ```typescript
 import { Node, mergeAttributes } from '@tiptap/core'
@@ -1032,7 +1338,7 @@ export default Node.create({
 })
 ```
 
-**文件**：[src/components/tiptap-extensions/diagrams/MermaidNodeView.ts](src/components/tiptap-extensions/diagrams/MermaidNodeView.ts)
+**文件**：[src/extensions/diagrams/MermaidNodeView.ts](src/extensions/diagrams/MermaidNodeView.ts)
 
 ```typescript
 import { NodeView } from '@tiptap/core'
@@ -1133,7 +1439,7 @@ export class MermaidNodeView implements NodeView {
 
 #### 3.3 Mermaid 输入规则（0.5 天）
 
-**文件**：[src/components/tiptap-extensions/markdown/MarkdownShortcuts.ts](src/components/tiptap-extensions/markdown/MarkdownShortcuts.ts)
+**文件**：[src/extensions/markdown/MarkdownShortcuts.ts](src/extensions/markdown/MarkdownShortcuts.ts)
 
 **添加规则**：
 ```typescript
@@ -1291,7 +1597,7 @@ const scrollToHeading = (id: string) => {
 
 #### 4.2 Focus Mode（0.5 天）
 
-**文件**：[src/components/tiptap-extensions/features/FocusMode.ts](src/components/tiptap-extensions/features/FocusMode.ts)
+**文件**：[src/extensions/features/FocusMode.ts](src/extensions/features/FocusMode.ts)
 
 **功能**：
 - 高亮当前段落
@@ -1405,7 +1711,7 @@ export default Extension.create({
 
 #### 4.4 搜索和替换（1 天）
 
-**文件**：[src/components/tiptap-extensions/features/SearchAndReplace.ts](src/components/tiptap-extensions/features/SearchAndReplace.ts)
+**文件**：[src/extensions/features/SearchAndReplace.ts](src/extensions/features/SearchAndReplace.ts)
 
 **功能**：
 - 文本搜索
@@ -2342,11 +2648,11 @@ const handleThemeChange = (theme: Theme) => {
 ### 需要创建的文件
 
 #### Markdown 扩展 (Phase 1)
-- [ ] [src/components/tiptap-extensions/markdown/TableExtension.ts](src/components/tiptap-extensions/markdown/TableExtension.ts)
-- [ ] [src/components/tiptap-extensions/markdown/FootnoteExtension.ts](src/components/tiptap-extensions/markdown/FootnoteExtension.ts)
-- [ ] [src/components/tiptap-extensions/markdown/YAMLFrontMatter.ts](src/components/tiptap-extensions/markdown/YAMLFrontMatter.ts)
-- [ ] [src/components/tiptap-extensions/markdown/GFMExtension.ts](src/components/tiptap-extensions/markdown/GFMExtension.ts)
-- [ ] [src/components/tiptap-extensions/markdown/MarkdownShortcuts.ts](src/components/tiptap-extensions/markdown/MarkdownShortcuts.ts)
+- [ ] [src/extensions/markdown/TableExtension.ts](src/extensions/markdown/TableExtension.ts)
+- [ ] [src/extensions/markdown/FootnoteExtension.ts](src/extensions/markdown/FootnoteExtension.ts)
+- [ ] [src/extensions/markdown/YAMLFrontMatter.ts](src/extensions/markdown/YAMLFrontMatter.ts)
+- [ ] [src/extensions/markdown/GFMExtension.ts](src/extensions/markdown/GFMExtension.ts)
+- [ ] [src/extensions/markdown/MarkdownShortcuts.ts](src/extensions/markdown/MarkdownShortcuts.ts)
 - [ ] [src/styles/table.css](src/styles/table.css)
 
 #### PrimeVue 样式定制 (Phase 1)
@@ -2357,20 +2663,20 @@ const handleThemeChange = (theme: Theme) => {
 - [ ] [src/styles/tokens/github-light.css](src/styles/tokens/github-light.css) - 默认主题
 
 #### 代码高亮 (Phase 2)
-- [ ] [src/components/tiptap-extensions/code/CodeBlockExtension.ts](src/components/tiptap-extensions/code/CodeBlockExtension.ts)
-- [ ] [src/components/tiptap-extensions/code/CodeBlockNodeView.ts](src/components/tiptap-extensions/code/CodeBlockNodeView.ts)
+- [ ] [src/extensions/code/CodeBlockExtension.ts](src/extensions/code/CodeBlockExtension.ts)
+- [ ] [src/extensions/code/CodeBlockNodeView.ts](src/extensions/code/CodeBlockNodeView.ts)
 - [ ] [src/styles/code-block.css](src/styles/code-block.css)
 
 #### Mermaid 图表 (Phase 3)
-- [ ] [src/components/tiptap-extensions/diagrams/MermaidExtension.ts](src/components/tiptap-extensions/diagrams/MermaidExtension.ts)
-- [ ] [src/components/tiptap-extensions/diagrams/MermaidNode.ts](src/components/tiptap-extensions/diagrams/MermaidNode.ts)
-- [ ] [src/components/tiptap-extensions/diagrams/MermaidNodeView.ts](src/components/tiptap-extensions/diagrams/MermaidNodeView.ts)
+- [ ] [src/extensions/diagrams/MermaidExtension.ts](src/extensions/diagrams/MermaidExtension.ts)
+- [ ] [src/extensions/diagrams/MermaidNode.ts](src/extensions/diagrams/MermaidNode.ts)
+- [ ] [src/extensions/diagrams/MermaidNodeView.ts](src/extensions/diagrams/MermaidNodeView.ts)
 - [ ] [src/styles/mermaid.css](src/styles/mermaid.css)
 
 #### 功能扩展 (Phase 4)
-- [ ] [src/components/tiptap-extensions/features/FocusMode.ts](src/components/tiptap-extensions/features/FocusMode.ts)
-- [ ] [src/components/tiptap-extensions/features/TypewriterMode.ts](src/components/tiptap-extensions/features/TypewriterMode.ts)
-- [ ] [src/components/tiptap-extensions/features/SearchAndReplace.ts](src/components/tiptap-extensions/features/SearchAndReplace.ts)
+- [ ] [src/extensions/features/FocusMode.ts](src/extensions/features/FocusMode.ts)
+- [ ] [src/extensions/features/TypewriterMode.ts](src/extensions/features/TypewriterMode.ts)
+- [ ] [src/extensions/features/SearchAndReplace.ts](src/extensions/features/SearchAndReplace.ts)
 - [ ] [src/components/outline/OutlinePanel.vue](src/components/outline/OutlinePanel.vue)
 - [ ] [src/components/outline/TOCGenerator.ts](src/components/outline/TOCGenerator.ts)
 

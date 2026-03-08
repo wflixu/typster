@@ -17,7 +17,9 @@
 
 ### 0. 开发优先级
 
-**实施顺序**（从高到低）：
+**实施顺序**（从高到低）
+
+0. **P0**: 编辑器基础功能（编辑区布局，状态栏，侧边栏，设置页面，自动更新app）← **新增，最优先**
 1. **P0**: Markdown 语法完善（表格、脚注、YAML）
 2. **P0**: 代码高亮和表格增强（Shiki）
 3. **P1**: Mermaid 图表支持
@@ -26,6 +28,104 @@
 6. **暂不实施**: 数学公式支持（KaTeX）
 
 **注**：数学公式功能留待未来版本考虑
+
+### 0.1 编辑器基础功能架构（Phase 0 - 新增）
+
+**目标**：构建完整的 Markdown 编辑器基础框架，包括 UI 布局、设置系统、自动保存等核心功能。
+
+#### 0.1.1 整体布局架构
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                      TitleBar (32px)                        │
+│  [☰ 文件树]                                    [设置⚙️] [关闭×] │
+├─────────────┬───────────────────────────────────────────────┤
+│             │                                               │
+│  Sidebar    │            Editor Area                        │
+│  (250px)    │            (flexible)                         │
+│  [文件/TOC] │            [Tiptap 编辑区]                     │
+│             │                                               │
+│             │                                               │
+├─────────────┴───────────────────────────────────────────────┤
+│                      StatusBar (24px)                       │
+│  文件路径 | 保存状态 | 字数 | 行：列 | 主题                │
+└─────────────────────────────────────────────────────────────┘
+```
+
+#### 0.1.2 现有组件状态
+
+| 组件 | 文件路径 | 状态 | 说明 |
+|------|----------|------|------|
+| 主布局 | `src/pages/home/Home.vue` | ✅ | Grid 布局容器 |
+| 标题栏 | `src/pages/home/TitleBar.vue` | ✅ | 顶部工具栏 |
+| 状态栏 | `src/pages/home/StatusBar.vue` | ✅ | 底部状态信息 |
+| 侧边栏 | `src/pages/home/Sidebar.vue` | ✅ | 文件树 + TOC |
+| 编辑器 | `src/pages/typst/TypstEditor.vue` | ✅ | Tiptap 编辑器 |
+| 设置页面 | - | ❌ | **待创建** |
+| 自动更新 | - | ❌ | **待创建** |
+
+#### 0.1.3 设置页面设计
+
+**文件结构**：
+```
+src/
+├── pages/settings/
+│   ├── Settings.vue           # 设置主页面（容器）
+│   ├── EditorSettings.vue     # 编辑器设置
+│   ├── AppearanceSettings.vue # 外观设置
+│   └── AutosaveSettings.vue   # 自动保存设置
+├── store/settings-store.ts    # 设置状态管理
+└── composables/
+    └── useSettings.ts         # 设置逻辑 Hook
+```
+
+**设置项设计**：
+| 类别 | 设置项 | 类型 | 默认值 |
+|------|--------|------|--------|
+| **编辑器** | 字体大小 | number | 16 |
+| | 字体家族 | string | 系统默认 |
+| | 行高 | number | 1.6 |
+| | 自动配对括号 | boolean | true |
+| **外观** | 主题模式 | 'light'/'dark'/'auto' | 'auto' |
+| | 主题预设 | string | 'github-light' |
+| | 编辑器宽度 | number | 800 |
+| **自动保存** | 启用自动保存 | boolean | true |
+| | 保存间隔 (秒) | number | 60 |
+
+#### 0.1.4 自动更新机制
+
+**Tauri Updater 配置**：
+```json
+// src-tauri/tauri.conf.json
+{
+  "plugins": {
+    "updater": {
+      "active": true,
+      "dialog": true,
+      "endpoints": ["https://github.com/your-org/typster/releases/latest/download/latest.json"],
+      "pubkey": "your-public-key"
+    }
+  }
+}
+```
+
+**更新检查逻辑**：
+```typescript
+// src/composables/useAutoUpdate.ts
+import { check } from '@tauri-apps/plugin-updater'
+import { relaunch } from '@tauri-apps/api/process'
+
+export function useAutoUpdate() {
+  const checkForUpdates = async () => {
+    const update = await check()
+    if (update?.available) {
+      await update.downloadAndInstall()
+      await relaunch()
+    }
+  }
+  return { checkForUpdates }
+}
+```
 
 ### 1. 完全 WYSIWYG 体验
 
@@ -1272,34 +1372,6 @@ src/
 │   │   ├── EditorToolbar.vue        # 工具栏
 │   │   └── EditorStatusBar.vue      # 状态栏
 │   │
-│   ├── tiptap-extensions/           # Tiptap 扩展
-│   │   ├── markdown/
-│   │   │   ├── MarkdownShortcuts.ts      # Markdown 快捷键
-│   │   │   ├── TableExtension.ts         # 表格扩展
-│   │   │   ├── TaskListExtension.ts      # 任务列表
-│   │   │   ├── FootnoteExtension.ts      # 脚注
-│   │   │   └── YAMLFrontMatter.ts        # YAML 前言
-│   │   │
-│   │   ├── diagrams/
-│   │   │   ├── MermaidExtension.ts       # Mermaid 扩展
-│   │   │   ├── MermaidNode.ts            # Mermaid 节点
-│   │   │   ├── MermaidNodeView.ts        # Mermaid NodeView
-│   │   │   └── MermaidRenderer.vue       # Mermaid 渲染器
-│   │   │
-│   │   // 注: 数学公式 (math/) 目录暂不创建，留待未来版本
-│   │   │
-│   │   ├── code/
-│   │   │   ├── CodeBlockExtension.ts     # 代码块扩展
-│   │   │   ├── CodeBlockNodeView.ts      # 代码块 NodeView
-│   │   │   └── Highlighter.ts            # Shiki 集成
-│   │   │
-│   │   └── features/
-│   │       ├── FocusMode.ts              # 专注模式
-│   │       ├── TypewriterMode.ts         # 打字机模式
-│   │       ├── WordCount.ts              # 字数统计
-│   │       ├── SearchAndReplace.ts       # 搜索替换
-│   │       └── AutoLink.ts               # 自动链接
-│   │
 │   ├── outline/
 │   │   ├── OutlinePanel.vue         # 大纲面板
 │   │   └── TOCGenerator.ts          # TOC 生成器
@@ -1310,6 +1382,34 @@ src/
 │   └── export/
 │       ├── ExportDialog.vue         # 导出对话框
 │       └── ExportService.ts         # 导出服务（仅 md + pdf）
+│
+├── extensions/                      # Tiptap 扩展
+│   ├── markdown/
+│   │   ├── MarkdownShortcuts.ts      # Markdown 快捷键
+│   │   ├── TableExtension.ts         # 表格扩展
+│   │   ├── TaskListExtension.ts      # 任务列表
+│   │   ├── FootnoteExtension.ts      # 脚注
+│   │   └── YAMLFrontMatter.ts        # YAML 前言
+│   │   
+│   ├── diagrams/
+│   │   ├── MermaidExtension.ts       # Mermaid 扩展
+│   │   ├── MermaidNode.ts            # Mermaid 节点
+│   │   ├── MermaidNodeView.ts        # Mermaid NodeView
+│   │   └── MermaidRenderer.vue       # Mermaid 渲染器
+│   │   
+│   │   // 注: 数学公式 (math/) 目录暂不创建，留待未来版本
+│   │   
+│   ├── code/
+│   │   ├── CodeBlockExtension.ts     # 代码块扩展
+│   │   ├── CodeBlockNodeView.ts      # 代码块 NodeView
+│   │   └── Highlighter.ts            # Shiki 集成
+│   │
+│   └── features/
+│       ├── FocusMode.ts              # 专注模式
+│       ├── TypewriterMode.ts         # 打字机模式
+│       ├── WordCount.ts              # 字数统计
+│       ├── SearchAndReplace.ts       # 搜索替换
+│       └── AutoLink.ts               # 自动链接
 │
 ├── styles/
 │   ├── tokens/                      # CSS Design Tokens
@@ -1336,6 +1436,20 @@ src/
 │
 └── store/
     └── editor-store.ts              # 编辑器状态管理
+
+├── pages/                           # 页面组件
+│   ├── home/
+│   │   ├── Home.vue                  # 主页布局（编辑器容器）
+│   │   └── Sidebar.vue               # 侧边栏（文件树/大纲切换）
+│   │
+│   ├── settings/
+│   │   ├── Settings.vue              # 设置主页面
+│   │   ├── EditorSettings.vue        # 编辑器设置
+│   │   ├── AppearanceSettings.vue    # 外观/主题设置
+│   │   └── KeymapSettings.vue        # 快捷键设置
+│   │
+│   └── export/
+│       └── ExportPage.vue            # 导出页面（可选）
 ```
 
 ---
