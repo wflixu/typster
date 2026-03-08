@@ -23,3 +23,6 @@ dist-ssr
 *.sln
 *.sw?
 */**/gen/
+
+# Tauri generated files
+src-tauri/gen/

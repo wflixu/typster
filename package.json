@@ -52,6 +52,8 @@
     "@tauri-apps/cli": "^2.9.5",
     "@types/node": "^24.10.1",
     "@vitejs/plugin-vue": "^6.0.2",
+    "oxfmt": "^0.36.0",
+    "oxlint": "^1.51.0",
     "typescript": "^5.9.3",
     "vite": "^7.2.6",
     "vue-tsc": "^3.1.5"

@@ -49,8 +49,8 @@
       </template>
       <template v-else>
         <ContextMenu ref="menuRef" :model="items" />
-        <Tree class="dir" v-model:selectionKeys="selectedKeys" selectionMode="single" :value="treeData"
-          @nodeSelect="onSelect">
+        <Tree class="dir" v-model:selectionKeys="selectedKeys" v-model:expandedKeys="expandedKeys"
+          selectionMode="single" :value="treeData" @nodeSelect="onSelect">
           <template #default="{ node }">
             <div @contextmenu="onRightClick($event, node)">
               <span>{{ node.label }}</span>
@@ -61,14 +61,14 @@
     </div>
     <div class="footer" v-if="!isToc">
       <Button icon="pi pi-plus" aria-label="Save" size="small" @click="onCreateFile" />
-      <Select :value="systemStore.editingProject?.path" size="small" :options="projects" optionLabel="title"
-        option-value="path" class="w-full md:w-56" @change="onSelectProject" />
+      <Select v-model="selectedProjectPath" size="small" :options="projects" optionLabel="title"
+        option-value="path" class="w-full md:w-56" @update:modelValue="onSelectProject" />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed } from 'vue';
+import { ref,  onMounted, computed, watch, nextTick } from 'vue';
 import { readDir, writeTextFile, remove, rename } from '@tauri-apps/plugin-fs';
 import { save } from '@tauri-apps/plugin-dialog';
 import { join } from '@tauri-apps/api/path';
@@ -76,10 +76,12 @@ import type { DirEntry } from '@tauri-apps/plugin-fs';
 import type { TreeNode } from 'primevue/treenode';
 import Button from 'primevue/button';
 import ContextMenu from 'primevue/contextmenu';
+import Select from 'primevue/select';
 import MoveBar from '../../components/MoveBar.vue';
 import { useSystemStoreHook } from '../../store/store';
 import { EventBus } from '../../shared/EventBus';
 import { validateTypstFilePath, hasPathTraversalPattern, sanitizePath } from '../../utils/path-security';
+import { TreeSelectionKeys } from 'primevue/tree';
 
 // 定义文件系统条目的类型，用于处理 Tauri fs API 返回的数据
 type FileSystemEntry = {
@@ -89,11 +91,23 @@ type FileSystemEntry = {
   children?: FileSystemEntry[];
 }
 
+const systemStore = useSystemStoreHook();
+
+// 项目选择
+const selectedProjectPath = ref(systemStore.editingProject?.path || '');
+
+// 监听当前项目变化，同步更新 selectedProjectPath
+watch(() => systemStore.editingProject?.path, (newPath) => {
+  if (newPath) {
+    selectedProjectPath.value = newPath;
+  }
+});
 
 // 使用全局状态
 const isToc = computed(() => {
   return systemStore.sidebarType === 'toc';
 })
+
 const onToggle = () => {
   if (systemStore.sidebarType === 'file') {
     systemStore.setSidebarType('toc');
@@ -102,12 +116,9 @@ const onToggle = () => {
   }
 }
 
-
-const systemStore = useSystemStoreHook();
-
-const expandedKeys = ref<string[]>([]);
-const selectedKeys = ref<string[]>([]);
-const treeData: any[] = reactive([]);
+const expandedKeys = ref<Record<string, boolean>>({});
+const selectedKeys:TreeSelectionKeys = ref({});
+const treeData= ref([]);
 
 const projects = computed(() => {
   return systemStore.projects;
@@ -165,9 +176,10 @@ const projectItems = projects.value.map(item => {
 const initFiles = async () => {
   try {
     // 清空现有数据
-    if (treeData.length > 0) {
-      treeData.splice(0, treeData.length);
-    }
+    treeData.value = [];
+    selectedKeys.value = {};
+    // 同时清空展开状态
+    expandedKeys.value = {};
 
     const curProject = systemStore.editingProject
     if (!curProject || !curProject.path) {
@@ -242,25 +254,39 @@ const initFiles = async () => {
       }
 
       await processEntries(entries, root);
-      treeData.push(root);
+      treeData.value.push(root);
 
-      // 恢复选中状态
+      // 等待 DOM 更新后再设置展开状态
+      await nextTick();
+
+      // 恢复选中状态和展开状态
       if (systemStore.editingFilePath) {
-        selectedKeys.value = [systemStore.editingFilePath];
+        selectedKeys.value[systemStore.editingFilePath] = true;
 
         // 展开到文件的路径
-        const pathParts = systemStore.editingFilePath.split('/');
-        for (let i = 1; i < pathParts.length - 1; i++) {
-          const parentPath = pathParts.slice(0, i + 1).join('/');
-          expandedKeys.value.push(parentPath);
+        // 从项目路径开始，逐层展开到文件的父目录
+        let currentPath = projectPath;
+        expandedKeys.value[currentPath] = true; // 确保根目录展开
+
+        // 获取相对于项目路径的路径部分
+        const relativePath = systemStore.editingFilePath.substring(projectPath.length + 1);
+        const pathParts = relativePath.split('/');
+
+        // 逐层构建并添加父目录路径（排除最后的文件名）
+        for (let i = 0; i < pathParts.length - 1; i++) {
+          currentPath = await join(currentPath, pathParts[i]);
+          expandedKeys.value[currentPath] = true;
         }
-        expandedKeys.value.push(projectPath);
+
+        console.log('Expanded keys:', expandedKeys.value);
+        console.log('Selected file:', systemStore.editingFilePath);
+        console.log('Project path:', projectPath);
       }
 
     } catch (readError) {
       console.error(`Failed to read directory ${projectPath}:`, readError);
       // 即使目录读取失败，仍显示根节点
-      treeData.push(root);
+      treeData.value.push(root);
     }
 
   } catch (error) {
@@ -412,18 +438,49 @@ const onCreateFile = async () => {
   }
 }
 
-const onSelectProject = ({ key }: any) => {
-  let selectedProject = systemStore.projects.find(item => item.path == key)
+const onSelectProject = (path: string) => {
+  let selectedProject = systemStore.projects.find(item => item.path === path)
   if (selectedProject) {
     systemStore.selectProject(selectedProject)
     window.location.reload();
   }
 }
 
+// 监听 treeData 变化，在数据加载完成后展开文件夹
+watch(treeData, async () => {
+  if (treeData.value.length > 0 && systemStore.editingFilePath) {
+    // 等待 DOM 更新
+    await nextTick();
+
+    // 再次等待确保 Tree 组件完全渲染
+    await nextTick();
+
+    // 重新设置展开状态
+    const projectPath = systemStore.editingProject?.path;
+    if (!projectPath) return;
+
+    expandedKeys.value = {};
+    let currentPath = projectPath;
+    expandedKeys.value[currentPath] = true; // 确保根目录展开
+
+    const relativePath = systemStore.editingFilePath.substring(projectPath.length + 1);
+    const pathParts = relativePath.split('/');
+
+    for (let i = 0; i < pathParts.length - 1; i++) {
+      currentPath = await join(currentPath, pathParts[i]);
+      expandedKeys.value[currentPath] = true;
+    }
+
+    console.log('From watcher - Expanded keys:', expandedKeys.value);
+  }
+}, { deep: true });
+
 onMounted(() => {
-  console.info('------')
   initFiles().then(() => {
-    // console.log(JSON.stringify(treeData))
+    // 初始加载完成后，如果有正在编辑的文件，确保它被选中和展开
+    if (systemStore.editingFilePath) {
+      selectedKeys.value[systemStore.editingFilePath] = true;
+    }
   });
 })
 
@@ -440,59 +497,33 @@ onMounted(() => {
   grid-template-rows: 32px 1fr 36px;
   border-right: 1px solid #ddd;
   position: relative;
+  overflow: hidden;
 
   .move {
+    grid-row: 1;
     height: 32px;
     padding-left: 80px;
   }
 
   .title {
+    padding: 0 16px;
     height: 40px;
-    padding: 8px 16px 0 16px;
     display: flex;
     justify-content: space-between;
     align-items: center;
     border-bottom: 1px solid #ddd;
   }
 
-  & :deep(.dir) {
-    height: calc(100% - 40px);
-    padding: 8px 0;
-    overflow-y: auto;
-  }
-
-  /* toc */
-  .toc {
-    overflow-y: auto;
-    padding: 16px 8px;
-    max-height: calc(100vh - 80px);
-
-    .toc-item {
-      height: 36px;
-      display: flex;
-      align-items: center;
-      padding: 0 8px;
-      color: #666;
-      text-decoration: none;
-      cursor: pointer;
-      padding-left: calc(0.875rem * (var(--level) - 1));
-    }
-
-    .toc-item:hover {
-      color: lightskyblue;
-    }
-
-    .toc-item.is-active {
-      background-color: bisque;
-    }
-
-    .toc-item.is-scrolled-over {
-      font-weight: bold;
-    }
-
+  .content {
+    grid-row: 2;
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
   }
 
   .footer {
+    grid-row: 3;
     height: 36px;
     padding: 0 16px;
     gap: 8px;
@@ -500,6 +531,64 @@ onMounted(() => {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    flex-shrink: 0;
+  }
+
+  & :deep(.dir) {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 0;
+    min-height: 0;
+    height: calc(100% - 40px);
+  }
+
+  /* toc */
+  .toc {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--spacing-md);
+    min-height: 0;
+
+    .toc-item {
+      height: 36px;
+      display: flex;
+      align-items: center;
+      padding: 0 var(--spacing-md);
+      margin: 2px 0;
+      color: var(--color-fg-secondary);
+      text-decoration: none;
+      cursor: pointer;
+      padding-left: calc(14px * (var(--level) - 1));
+      border-radius: var(--radius-sm);
+      transition: all 0.15s ease;
+      font-size: 16px;
+      line-height: 1.5;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .toc-item:hover {
+      color: var(--color-accent-primary);
+      background: var(--color-bg-secondary);
+    }
+
+    .toc-item.is-active {
+      background: var(--color-accent-primary);
+      color: white;
+      font-weight: 500;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    }
+
+    .toc-item.is-active:hover {
+      background: var(--color-accent-hover);
+    }
+
+    .toc-item.is-scrolled-over {
+      font-weight: 500;
+      color: var(--color-fg-primary);
+      opacity: 0.7;
+    }
   }
 }
 </style>
