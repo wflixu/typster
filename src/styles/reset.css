@@ -1,0 +1,98 @@
+/* 全局样式重置 */
+
+/* === 确保 PrimeVue 不影响编辑器内容 === */
+.ProseMirror,
+.ProseMirror * {
+  box-sizing: border-box;
+}
+
+/* 重置按钮样式继承 */
+.ProseMirror button {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+}
+
+/* 重置输入框样式继承 */
+.ProseMirror input,
+.ProseMirror textarea {
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: none;
+  outline: none;
+}
+
+/* 确保链接样式符合 Typora 风格 */
+.ProseMirror a {
+  color: var(--color-accent-primary);
+  text-decoration: none;
+}
+
+.ProseMirror a:hover {
+  text-decoration: underline;
+}
+
+/* 全局基础样式 */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-base);
+  color: var(--color-fg-primary);
+  background: var(--color-bg-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* 禁用默认的 outline，使用自定义样式 */
+:focus {
+  outline: none;
+}
+
+/* 滚动条样式 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-bg-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-fg-tertiary);
+}
+
+/* 选择文本样式 */
+::selection {
+  background: var(--color-accent-primary);
+  color: white;
+}
+
+/* 禁用用户选择（用于 UI 元素） */
+.no-select {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}

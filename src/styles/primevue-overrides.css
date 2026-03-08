@@ -1,0 +1,219 @@
+/* PrimeVue 样式覆盖 - Typora 极简风格 */
+
+/* === PrimeVue 全局样式覆盖 === */
+.p-component {
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-base);
+  color: var(--color-fg-primary);
+}
+
+/* === Button 覆盖：Typora 极简风格 === */
+.p-button {
+  background: transparent;
+  border: none;
+  color: var(--color-fg-secondary);
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--radius-sm);
+  transition: all 0.15s ease;
+}
+
+.p-button:hover {
+  background: var(--color-bg-secondary);
+  color: var(--color-fg-primary);
+}
+
+.p-button:focus {
+  box-shadow: none;
+  outline: 1px solid var(--color-accent-primary);
+  outline-offset: 2px;
+}
+
+/* 图标按钮（Typora 风格） */
+.icon-button {
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background 0.15s ease;
+  background: transparent;
+  border: none;
+  color: var(--color-fg-secondary);
+}
+
+.icon-button:hover {
+  background: var(--color-bg-tertiary);
+}
+
+/* === Dialog 覆盖：轻量模态框 === */
+.p-dialog {
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+}
+
+.p-dialog-header {
+  border-bottom: 1px solid var(--color-border-light);
+  padding: var(--spacing-md) var(--spacing-lg);
+}
+
+.p-dialog-title {
+  font-size: var(--font-size-base);
+  font-weight: 500;
+  color: var(--color-fg-primary);
+}
+
+.p-dialog-content {
+  padding: var(--spacing-lg);
+}
+
+.p-dialog-footer {
+  border-top: 1px solid var(--color-border-light);
+  padding: var(--spacing-md) var(--spacing-lg);
+}
+
+/* === Select 覆盖 === */
+.p-select {
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.p-select:hover {
+  border-color: var(--color-accent-primary);
+}
+
+.p-select-option {
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: var(--font-size-small);
+}
+
+.p-select-option:hover {
+  background: var(--color-bg-secondary);
+}
+
+/* === Tree 覆盖：文件浏览器 === */
+.p-tree {
+  background: transparent;
+  border: none;
+}
+
+.p-tree-node-content {
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background 0.1s ease;
+}
+
+.p-tree-node-content:hover {
+  background: var(--color-bg-secondary);
+}
+
+.p-tree-node-content.selected {
+  background: var(--color-accent-primary);
+  color: white;
+}
+
+.p-tree-node-icon {
+  color: var(--color-fg-tertiary);
+}
+
+/* === ContextMenu 覆盖 === */
+.p-contextmenu {
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  padding: var(--spacing-xs);
+  min-width: 180px;
+}
+
+.p-contextmenu-item {
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-small);
+  cursor: pointer;
+}
+
+.p-contextmenu-item:hover {
+  background: var(--color-bg-secondary);
+}
+
+.p-contextmenu-item-link {
+  color: var(--color-fg-primary);
+  text-decoration: none;
+}
+
+/* === ProgressSpinner 覆盖 === */
+.p-progress-spinner {
+  width: 24px;
+  height: 24px;
+}
+
+.p-progress-spinner-circle {
+  stroke: var(--color-accent-primary);
+  stroke-width: 2;
+}
+
+/* === InputNumber 覆盖 === */
+.p-inputnumber {
+  width: 100%;
+}
+
+.p-inputnumber-input {
+  width: 100%;
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: var(--spacing-sm);
+  font-size: var(--font-size-small);
+}
+
+.p-inputnumber-input:focus {
+  outline: 1px solid var(--color-accent-primary);
+  outline-offset: -1px;
+}
+
+/* === InputSwitch 覆盖 === */
+.p-inputswitch {
+  width: 2.5rem;
+  height: 1.5rem;
+}
+
+.p-inputswitch-slider {
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border);
+}
+
+.p-inputswitch-checked .p-inputswitch-slider {
+  background: var(--color-accent-primary);
+}
+
+/* === TabMenu 覆盖 === */
+.p-tabmenu {
+  background: transparent;
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.p-tabmenu-nav {
+  background: transparent;
+  border: none;
+}
+
+.p-tabmenu-item {
+  padding: var(--spacing-sm) var(--spacing-md);
+  color: var(--color-fg-secondary);
+  border-bottom: 2px solid transparent;
+}
+
+.p-tabmenu-item:hover {
+  background: var(--color-bg-secondary);
+}
+
+.p-tabmenu-item.p-tabmenu-item-active {
+  color: var(--color-accent-primary);
+  border-bottom-color: var(--color-accent-primary);
+}

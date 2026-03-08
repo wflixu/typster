@@ -9,10 +9,13 @@ import { nextTick, onMounted, onUnmounted, ref, toRaw, useTemplateRef, watch } f
 import { useEditor, EditorContent } from '@tiptap/vue-3'
 import StarterKit from '@tiptap/starter-kit'
 import { TaskItem, TaskList } from '@tiptap/extension-list'
-import { Markdown } from '@tiptap/markdown';
-import { useSystemStoreHook } from '../../store/store';
-import { readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
-import { showSaveChanges, showFileError } from '../../utils/dialog-utils';
+import { Markdown } from '@tiptap/markdown'
+import { Table, TableRow, TableHeader, TableCell } from '@tiptap/extension-table'
+import { CodeBlockLowlight } from '@tiptap/extension-code-block-lowlight'
+import { createLowlight, common } from 'lowlight'
+import { useSystemStoreHook } from '../../store/store'
+import { readTextFile, writeTextFile } from '@tauri-apps/plugin-fs'
+import { showSaveChanges, showFileError } from '../../utils/dialog-utils'
 import { debounce } from '../../shared/util'
 import { TableOfContents, getHierarchicalIndexes, getLinearIndexes } from '@tiptap/extension-table-of-contents'
 import { EventBus } from '../../shared/EventBus'
@@ -20,7 +23,10 @@ import { TextSelection } from '@tiptap/pm/state'
 import { hasPathTraversalPattern, validateTypstFilePath } from '../../utils/path-security'
 import { handlePasteImage, getTypstImageSyntax } from '../../utils/image-handler'
 
-const systemStore = useSystemStoreHook();
+const systemStore = useSystemStoreHook()
+
+// 创建 lowlight 实例用于代码高亮
+const lowlight = createLowlight(common)
 
 // 文件保存状态
 const isSaving = ref(false);
@@ -55,7 +61,9 @@ const editor = useEditor({
     content: 'default content',
     contentType: 'markdown',
     extensions: [
-        StarterKit,
+        StarterKit.configure({
+            codeBlock: false, // 禁用默认代码块，使用 CodeBlockLowlight
+        }),
         TaskList,
         TaskItem.configure({
             nested: true,
@@ -66,6 +74,18 @@ const editor = useEditor({
                 debouncedUpdateToc(content);
             },
 
+        }),
+        // 表格支持
+        Table.configure({
+            resizable: true,
+        }),
+        TableRow,
+        TableHeader,
+        TableCell,
+        // 代码块高亮
+        CodeBlockLowlight.configure({
+            lowlight,
+            defaultLanguage: 'text',
         }),
         Markdown,
 

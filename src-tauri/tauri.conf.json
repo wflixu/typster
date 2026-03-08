@@ -51,7 +51,16 @@
   },
   
 
-  "plugins": {},
+  "plugins": {
+    "updater": {
+      "active": true,
+      "dialog": true,
+      "endpoints": [
+        "https://github.com/wflixu/typster/releases/latest/download/latest.json"
+      ],
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDQ2QjQ4QjY4RDcxNjI1RjYKUldRRk51UWcrV2ZGaHBCbVRNQmJDL3BScnBOY2svdWoybGJBb1NkK3N6aGtoczdINlZ2clBNQ2EK"
+    }
+  },
   "app": {
     "macOSPrivateApi": true,
     "withGlobalTauri": false,

@@ -10,16 +10,19 @@
                 'pi-angle-double-left': systemStore.showSidebar,
                 'pi-angle-double-right': !systemStore.showSidebar,
             }" @click="() => systemStore.toggleShowSidebar()" style="font-size: 1rem"></i>
-            <i class="pi pi-cog cursor-pointer" style="font-size: 1rem"></i>
+            <i class="pi pi-cog cursor-pointer" @click="openSettings" style="font-size: 1rem"></i>
         </div>
     </div>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue';
+import { useRouter } from 'vue-router';
 import { useSystemStoreHook } from '../../store/store';
 
+const router = useRouter()
 const systemStore = useSystemStoreHook()
+
 const editingFileName = computed(() => {
     const path = systemStore.editingFilePath
     if (path) {
@@ -28,6 +31,10 @@ const editingFileName = computed(() => {
         return '未命名.md'
     }
 })
+
+const openSettings = () => {
+    router.push('/settings')
+}
 
 </script>
 

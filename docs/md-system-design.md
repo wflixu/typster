@@ -6,10 +6,9 @@
 
 **技术栈**：
 - **前端**：Vue 3 + TypeScript + Tiptap 3.13.0 + PrimeVue
-- **后端**：Tauri 2.0 + Rust（预留 Typst 未来扩展）
-- **图表渲染**：Mermaid.js（Phase 3）
+- **后端**：Tauri 2.0 + Rust（文件系统安全、PDF 导出）
 - **代码高亮**：Shiki（Phase 2）
-- **数学公式**：暂不实施（留待未来版本）
+- **图表渲染**：Mermaid.js（Phase 5 - P2 优先级）
 
 ---
 
@@ -21,13 +20,13 @@
 
 0. **P0**: 编辑器基础功能（编辑区布局，状态栏，侧边栏，设置页面，自动更新app）← **新增，最优先**
 1. **P0**: Markdown 语法完善（表格、脚注、YAML）
-2. **P0**: 代码高亮和表格增强（Shiki）
-3. **P1**: Mermaid 图表支持
-4. **P1**: 高级功能（Focus Mode、大纲、搜索等）
-5. **P1**: 导出和主题系统
-6. **暂不实施**: 数学公式支持（KaTeX）
+2. **P0**: Shiki 代码高亮（Phase 2）
+3. **P1**: 高级功能（Focus Mode、大纲、搜索、图片处理等）
+4. **P1**: 导出和主题系统
+5. **P2**: Mermaid 图表支持（锦上添花功能）
 
-**注**：数学公式功能留待未来版本考虑
+**注**：
+- Mermaid 图表降级为 P2 优先级（非核心功能，可延后）
 
 ### 0.1 编辑器基础功能架构（Phase 0 - 新增）
 
@@ -141,24 +140,7 @@ export function useAutoUpdate() {
                             用户看不到原始 Markdown 语法
 ```
 
-### 2. 扩展性优先
-
-**为未来 Typst 支持预留接口**：
-
-```typescript
-// 架构分层
-Editor Layer (Tiptap)
-    ↓
-Format Abstraction Layer (抽象层)
-    ├── MarkdownFormat (当前实现)
-    └── TypstFormat (未来扩展)
-    ↓
-Renderer Layer
-    ├── MarkdownRenderer
-    └── TypstRenderer (未来)
-```
-
-### 3. 性能优化
+### 2. 性能优化
 
 **策略**：
 - 虚拟滚动（大文档支持）
@@ -197,7 +179,7 @@ Renderer Layer
 ┌─────────────────────────────────────────────────────────────┐
 │                   渲染服务层 (Renderer Layer)                 │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐  │
-│  │ Mermaid 渲染 │  │ 代码高亮渲染 │  │ (未来: Typst渲染) │  │
+│  │ Mermaid 渲染 │  │ 代码高亮渲染 │  │ 其他渲染服务     │  │
 │  └──────────────┘  └──────────────┘  └──────────────────┘  │
 └─────────────────────────────────────────────────────────────┘
                               ↓
@@ -231,11 +213,8 @@ const extensions = [
   FootnoteExtension,             // 脚注支持
   YAMLFrontMatter,              // YAML 前言
 
-  // === 图表扩展 ===
-  MermaidExtension,              // Mermaid 图表 (Phase 3)
-
-  // === 注: 数学公式支持暂不实施 ===
-  // MathExtension,              // 未来版本: 数学公式（KaTeX）
+  // === 图表扩展（Phase 5 - P2 优先级）===
+  // MermaidExtension,            // Mermaid 图表（可选功能，延后实施）
 
   // === 编辑器功能扩展 ===
   TableOfContents,               // 目录生成
@@ -248,10 +227,6 @@ const extensions = [
   TypewriterMode,                // 打字机模式
   WordCount,                     // 字数统计
   SearchAndReplace,              // 搜索替换
-
-  // === Typst 预留扩展 ===
-  // TypstSyntax,                // 未来 Typst 语法支持
-  // TypstRenderer,              // 未来 Typst 渲染
 ]
 ```
 
@@ -265,12 +240,9 @@ interface BaseExtensionConfig {
   dependencies?: string[]
 }
 
-abstract class TypstExtension extends Extension {
-  // 为未来 Typst 支持预留的方法
+abstract class BaseExtension extends Extension {
   abstract toMarkdown(): string
-  abstract toTypst?(): string  // 未来实现
   abstract parseMarkdown(content: string): Node
-  abstract parseTypst?(content: string): Node  // 未来实现
 }
 ```
 
@@ -337,7 +309,7 @@ const renderMermaid = async (code: string, id: string) => {
 }
 ```
 
-### 3. 代码块高亮系统
+### 2.5. 代码块高亮系统
 
 #### 技术选型：Shiki
 
@@ -412,12 +384,8 @@ const inputRules = [
   textblockTypeInputRule(/^---$/, horizontalRule),
   textblockTypeInputRule(/^\*\*\*$/, horizontalRule),
 
-  // === Mermaid 图表 ===
-  textblockTypeInputRule(/^```mermaid$/, mermaidBlock),
-
-  // === 数学公式（低优先级） ===
-  inputRule(/\$([^$]+)\$/, mathInline),
-  inputRule(/\$\$([^$]+)\$\$/, mathDisplay),
+  // === Mermaid 图表（Phase 5 - 可选）===
+  // textblockTypeInputRule(/^```mermaid$/, mermaidBlock),
 ]
 ```
 
@@ -1396,9 +1364,7 @@ src/
 │   │   ├── MermaidNode.ts            # Mermaid 节点
 │   │   ├── MermaidNodeView.ts        # Mermaid NodeView
 │   │   └── MermaidRenderer.vue       # Mermaid 渲染器
-│   │   
-│   │   // 注: 数学公式 (math/) 目录暂不创建，留待未来版本
-│   │   
+│   │
 │   ├── code/
 │   │   ├── CodeBlockExtension.ts     # 代码块扩展
 │   │   ├── CodeBlockNodeView.ts      # 代码块 NodeView
@@ -1428,7 +1394,7 @@ src/
 ├── utils/
 │   ├── markdown-serializer.ts       # Markdown 序列化器
 │   ├── markdown-parser.ts           # Markdown 解析器
-│   ├── format-converter.ts          # 格式转换器（为 Typst 预留）
+│   ├── format-converter.ts          # 格式转换器
 │   └── performance.ts               # 性能工具
 │
 ├── composables/
@@ -1480,8 +1446,6 @@ src/
 }
 ```
 
-**注**: KaTeX 依赖暂不添加，数学公式功能留待未来版本
-
 ---
 
 ## 与现有代码的集成
@@ -1498,58 +1462,6 @@ src/
 1. **[src/pages/typst/TypstEditor.vue](src/pages/typst/TypstEditor.vue)** - 主编辑器，需要添加新扩展
 2. **[src/pages/home/Home.vue](src/pages/home/Home.vue)** - 主布局，可能需要调整
 3. **[src/App.vue](src/App.vue)** - 应用入口，可能需要主题支持
-
----
-
-## 未来 Typst 扩展预留接口
-
-### 格式抽象层
-
-```typescript
-// 格式接口定义
-interface DocumentFormat {
-  name: string
-  extensions: string[]
-  serialize(state: EditorState): string
-  parse(content: string): Node
-  render?(content: string): Promise<string>
-}
-
-// Markdown 格式实现
-class MarkdownFormat implements DocumentFormat {
-  name = 'markdown'
-  extensions = ['.md', '.markdown']
-  serialize = (state) => state.doc.toJSON()
-  parse = (content) => MarkdownParser.parse(content)
-}
-
-// Typst 格式实现（未来）
-class TypstFormat implements DocumentFormat {
-  name = 'typst'
-  extensions = ['.typ']
-  serialize = (state) => TypstSerializer.serialize(state)
-  parse = (content) => TypstParser.parse(content)
-  render = async (content) => {
-    // 调用后端 Typst 编译服务
-    return invoke('typst_compile', { content })
-  }
-}
-```
-
-### 扩展点
-
-```typescript
-// 编辑器配置预留扩展点
-const editorConfig = {
-  // 当前：Markdown 扩展
-  format: new MarkdownFormat(),
-  extensions: markdownExtensions,
-
-  // 未来：可以切换到 Typst
-  // format: new TypstFormat(),
-  // extensions: typstExtensions,
-}
-```
 
 ---
 
@@ -1585,9 +1497,8 @@ function measurePerformance(target: any, propertyKey: string, descriptor: Proper
 
 1. **完整的 Typora 功能复刻**：所有核心功能都有明确的实现路径
 2. **Mermaid 图表支持**：完整的图表渲染系统
-3. **扩展性**：为未来 Typst 支持预留了清晰的接口
-4. **性能优化**：虚拟滚动、增量渲染、Web Worker
-5. **可维护性**：清晰的模块划分和文件组织
+3. **性能优化**：虚拟滚动、增量渲染、Web Worker
+4. **可维护性**：清晰的模块划分和文件组织
 
 ---
 

@@ -5,14 +5,11 @@
 **目标**：一比一复刻 Typora，打造极致的 Markdown WYSIWYG 编辑体验
 
 **开发阶段**：
-- **Phase 1 (v1.x)**: 完美 Markdown 编辑器（当前阶段）
-- **Phase 2 (v2.x/v3.x)**: 扩展 Typst 支持（未来）
+- **Phase 1 (v1.x)**: 完美 Markdown 编辑器
 
 **核心原则**：
 - 专注 Markdown 完美体验
-- 为未来 Typst 预留扩展性
 - 优先实现 Typora 核心功能
-- **暂不实施数学公式支持**（留待未来版本）
 
 ---
 
@@ -22,16 +19,17 @@
 
 | 阶段 | 内容 | 预估时间 | 优先级 |
 |------|------|----------|--------|
-| **Phase 0** | **编辑器基础功能**（设置页面、自动更新等） | **3-4 天** | **P0** |
+| **Phase 0** | **编辑器基础功能**（编辑区布局，状态栏，侧边栏，设置页面，自动更新app等） | **5-7 天** | **P0** |
 | Phase 1 | Markdown 语法完善 | 4-6 天 | **P0** |
-| Phase 2 | 代码高亮和表格增强 | 3-5 天 | **P0** |
-| Phase 3 | Mermaid 图表支持 | 5-7 天 | P1 |
-| Phase 4 | 高级功能和优化 | 4-6 天 | P1 |
-| Phase 5 | 导出和主题系统 | 2-3 天 | P1 |
+| Phase 2 | **代码高亮和表格增强（Shiki）** | 3-4 天 | **P0** |
+| Phase 3 | 高级功能和优化（Focus Mode、大纲、搜索、图片处理） | 5-6 天 | P1 |
+| Phase 4 | 导出和主题系统 | 2-3 天 | P1 |
+| Phase 5 | Mermaid 图表支持 | 3-4 天 | **P2** |
 
-**总计**: 约 21-31 天（约 1-1.5 个月）
+**总计**: 约 23-31 天（约 1-1.5 个月）
 
-**注**：数学公式支持（KaTeX）暂不实施，留待未来版本考虑
+**注**：
+- **Mermaid 图表**降级为 P2 优先级（锦上添花功能）
 
 ---
 
@@ -55,7 +53,7 @@
 
 ### 任务清单
 
-#### 0.1 设置页面实现（1 天）
+#### 0.1 设置页面实现（1.5 天）
 
 **创建文件**：
 ```bash
@@ -192,7 +190,7 @@ const routes = [
 ]
 ```
 
-#### 0.2 自动更新机制（0.5 天）
+#### 0.2 自动更新机制（1 天）
 
 **配置 Tauri Updater**：
 ```json
@@ -329,7 +327,7 @@ const openSettings = () => {
 </template>
 ```
 
-#### 0.5 测试和验证（0.25 天）
+#### 0.5 测试和验证（0.5 天）
 
 **测试清单**：
 - [ ] 设置页面可访问
@@ -1265,10 +1263,10 @@ extensions: [
 
 ---
 
-## Phase 3: Mermaid 图表支持
+## Phase 3: 高级功能和优化
 
 ### 目标
-实现 Mermaid 图表渲染功能（Typora 核心功能之一）
+实现 Typora 高级功能，包括 Focus Mode、大纲导航、搜索替换、图片处理等
 
 ### 任务清单
 
@@ -2826,40 +2824,6 @@ describe('Mermaid Diagrams', () => {
 
 ---
 
-## 与未来 Typst 支持的兼容
-
-### 扩展点预留
-
-在实现 Markdown 功能时，确保：
-
-1. **格式抽象**：所有 Markdown 处理通过抽象层
-2. **扩展隔离**：每个扩展独立，不影响其他格式
-3. **配置灵活**：编辑器配置支持动态切换格式
-
-### 示例：为 Typst 预留的接口
-
-```typescript
-// 当前实现
-const editor = useEditor({
-  extensions: markdownExtensions,
-  format: 'markdown',
-})
-
-// 未来 Typst 支持
-const editor = useEditor({
-  extensions: typstExtensions,
-  format: 'typst',
-})
-
-// 或者混合模式
-const editor = useEditor({
-  extensions: [...markdownExtensions, ...typstExtensions],
-  format: 'hybrid',
-})
-```
-
----
-
 ## 风险和挑战
 
 ### 技术风险
@@ -2899,7 +2863,7 @@ const editor = useEditor({
 
 ---
 
-*计划版本: v2.0*
+*计划版本: v1.0*
 *创建日期: 2025-03-08*
 *最后更新: 2025-03-08 (调整优先级)*
 *基于项目: Typster v0.12.1*
