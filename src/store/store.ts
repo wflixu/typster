@@ -1,8 +1,9 @@
 import { createPinia, defineStore } from "pinia";
-import { reactive, ref, } from "vue";
+import { reactive, ref, shallowRef, } from "vue";
 import { IProject } from "../shared/interface";
 import { IMode } from "../pages/typst/interface";
 import { IEditingInfo, SidebarType } from "../shared/interface";
+import type { Editor } from "@tiptap/vue-3";
 
 const pinia = createPinia();
 const EDITING_FILE = "EDITING_FILE";
@@ -85,7 +86,11 @@ const useSystemStoreHook = defineStore("system", () => {
     toc.value = data;
   }
 
-
+  // editor
+  const editor = shallowRef<Editor| undefined>();
+  const setEditor = (instance: any) => {
+    editor.value = instance;
+  }
 
   return {
     loading,
@@ -112,6 +117,9 @@ const useSystemStoreHook = defineStore("system", () => {
     // toc
     toc,
     setToc,
+    // editor
+    editor,
+    setEditor,
   };
 });
 

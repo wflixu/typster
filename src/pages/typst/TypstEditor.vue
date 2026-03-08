@@ -5,7 +5,7 @@
 </template>
 
 <script setup lang="ts">
-import { nextTick, onMounted, onUnmounted, ref, toRaw, useTemplateRef, watch } from 'vue'
+import { nextTick, onMounted, onUnmounted, ref, shallowRef, toRaw, useTemplateRef, watch } from 'vue'
 import { useEditor, EditorContent } from '@tiptap/vue-3'
 import StarterKit from '@tiptap/starter-kit'
 import { TaskItem, TaskList } from '@tiptap/extension-list'
@@ -16,7 +16,6 @@ import { createLowlight, common } from 'lowlight'
 import { useSystemStoreHook } from '../../store/store'
 import { readTextFile, writeTextFile } from '@tauri-apps/plugin-fs'
 import { showSaveChanges, showFileError } from '../../utils/dialog-utils'
-import { debounce } from '../../shared/util'
 import { TableOfContents, getHierarchicalIndexes, getLinearIndexes } from '@tiptap/extension-table-of-contents'
 import { EventBus } from '../../shared/EventBus'
 import { TextSelection } from '@tiptap/pm/state'
@@ -47,14 +46,12 @@ const emitUnsavedChangesUpdate = (hasChanges: boolean) => {
 }
 
 
-const debouncedUpdateToc = debounce((items) => {
-    console.info('update toc', toRaw(items))
-    if (!editor.value) {
-        return;
-    }
-    systemStore.setToc(items)
-
-}, 1000);
+// TOC data from the extension already has isActive and isScrolledOver calculated
+const handleTocUpdate = (content: any[]) => {
+    console.info('TOC updated from extension', toRaw(content));
+    // The extension provides content with isActive and isScrolledOver already calculated
+    systemStore.setToc(content);
+};
 
 // Editor - 配置编辑器，正确使用@tiptap/markdown
 const editor = useEditor({
@@ -70,10 +67,13 @@ const editor = useEditor({
         }),
         TableOfContents.configure({
             anchorTypes: ['heading'],
-            onUpdate: content => {
-                debouncedUpdateToc(content);
+            getIndex: getHierarchicalIndexes,
+            // The extension needs to know which element is the scrollable container
+            scrollParent: () => containerRef.value ?? window,
+            // The extension automatically calculates isActive and isScrolledOver
+            onUpdate: (content) => {
+                handleTocUpdate(content);
             },
-
         }),
         // 表格支持
         Table.configure({
@@ -186,11 +186,6 @@ const loadFileContent = async (filePath: string) => {
         // 立即更新统计信息
         updateStatistics();
         updateCursorPosition();
-
-        // 等待 DOM 更新后更新 TOC 高亮状态
-        nextTick(() => {
-            updateTocActiveState();
-        });
 
         emitStatusUpdate('saved', '加载完成');
         console.log('File loaded successfully, content:', content.substring(0, 100) + '...');
@@ -368,85 +363,6 @@ const handleSelectTocItem = ({ id }: { id: string }) => {
 
 };
 
-// TOC 滚动高亮逻辑
-const updateTocActiveState = () => {
-    if (!editor.value || !containerRef.value) return;
-
-    const tocData = systemStore.toc;
-    if (!tocData || tocData.length === 0) return;
-
-    const container = containerRef.value;
-    const scrollTop = container.scrollTop;
-    const containerHeight = container.clientHeight;
-    const viewportMiddle = scrollTop + containerHeight / 3; // 使用视口上 1/3 处作为判断点
-
-    // 获取所有标题元素的位置
-    const headingPositions: Array<{ id: string; top: number }> = [];
-
-    tocData.forEach((item: any) => {
-        const element = editor.value!.view.dom.querySelector(`[data-toc-id="${item.id}"]`);
-        if (element) {
-            const elementTop = element.getBoundingClientRect().top + scrollTop;
-            headingPositions.push({
-                id: item.id,
-                top: elementTop
-            });
-        }
-    });
-
-    if (headingPositions.length === 0) return;
-
-    // 找到当前在视口中的标题
-    let activeId: string | null = null;
-    let minDistance = Infinity;
-
-    headingPositions.forEach(({ id, top }) => {
-        const distance = Math.abs(top - viewportMiddle);
-        if (top <= viewportMiddle && distance < minDistance) {
-            minDistance = distance;
-            activeId = id;
-        }
-    });
-
-    // 如果没有找到在视口中部的标题，使用第一个在视口内的标题
-    if (!activeId) {
-        const firstInView = headingPositions.find(({ top }) =>
-            top >= scrollTop && top <= scrollTop + containerHeight
-        );
-        if (firstInView) {
-            activeId = firstInView.id;
-        }
-    }
-
-    // 如果还没有找到，使用最接近视口顶部的标题
-    if (!activeId) {
-        const closest = headingPositions.reduce((prev, curr) => {
-            const prevDistance = Math.abs(prev.top - scrollTop);
-            const currDistance = Math.abs(curr.top - scrollTop);
-            return currDistance < prevDistance ? curr : prev;
-        });
-        activeId = closest.id;
-    }
-
-    // 更新 TOC 数据的 active 状态
-    const updatedToc = tocData.map((item: any) => {
-        const isActive = item.id === activeId;
-        const isScrolledOver = headingPositions.some(
-            ({ id, top }) => id === item.id && top < scrollTop - 50
-        );
-
-        return {
-            ...item,
-            isActive,
-            isScrolledOver
-        };
-    });
-
-    systemStore.setToc(updatedToc);
-};
-
-// 防抖的 TOC 更新
-const debouncedUpdateTocActive = debounce(updateTocActiveState, 100);
 
 onMounted(() => {
     window.addEventListener('beforeunload', handleBeforeUnload);
@@ -458,10 +374,7 @@ onMounted(() => {
 
     EventBus.on('select-toc-item', handleSelectTocItem);
 
-    // 添加滚动监听来更新 TOC 高亮
-    if (containerRef.value) {
-        containerRef.value.addEventListener('scroll', debouncedUpdateTocActive);
-    }
+    systemStore.setEditor(editor.value);
 })
 
 onUnmounted(() => {
@@ -473,11 +386,6 @@ onUnmounted(() => {
     }
 
     EventBus.off('select-toc-item', handleSelectTocItem);
-
-    // 移除滚动监听
-    if (containerRef.value) {
-        containerRef.value.removeEventListener('scroll', debouncedUpdateTocActive);
-    }
 })
 </script>
 

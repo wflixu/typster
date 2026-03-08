@@ -35,8 +35,9 @@
         <span></span>
       </div>
       <template v-if="isToc">
-        <div class="toc">
-          <a :href="'#' + item.id" @click.prevent="() => onClickTocItem(item)" class="toc-item" v-for="item in tocList"
+        <div class="toc" ref="tocContainer">
+          <ToC :items="tocList" />
+          <!-- <a :href="'#' + item.id" @click.prevent="() => onClickTocItem(item)" class="toc-item" v-for="item in tocList"
             :key="item.id" :class="{
               'is-active': item.isActive && !item.isScrolledOver,
               'is-scrolled-over': item.isScrolledOver,
@@ -44,7 +45,7 @@
             :data-item-index="item.itemIndex"
             >
             {{ item.textContent }}
-          </a>
+          </a> -->
         </div>
       </template>
       <template v-else>
@@ -61,14 +62,14 @@
     </div>
     <div class="footer" v-if="!isToc">
       <Button icon="pi pi-plus" aria-label="Save" size="small" @click="onCreateFile" />
-      <Select v-model="selectedProjectPath" size="small" :options="projects" optionLabel="title"
-        option-value="path" class="w-full md:w-56" @update:modelValue="onSelectProject" />
+      <Select v-model="selectedProjectPath" size="small" :options="projects" optionLabel="title" option-value="path"
+        class="w-full md:w-56" @update:modelValue="onSelectProject" />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref,  onMounted, computed, watch, nextTick } from 'vue';
+import { ref, onMounted, computed, watch, nextTick } from 'vue';
 import { readDir, writeTextFile, remove, rename } from '@tauri-apps/plugin-fs';
 import { save } from '@tauri-apps/plugin-dialog';
 import { join } from '@tauri-apps/api/path';
@@ -82,6 +83,7 @@ import { useSystemStoreHook } from '../../store/store';
 import { EventBus } from '../../shared/EventBus';
 import { validateTypstFilePath, hasPathTraversalPattern, sanitizePath } from '../../utils/path-security';
 import { TreeSelectionKeys } from 'primevue/tree';
+import ToC from './ToC.vue';
 
 // 定义文件系统条目的类型，用于处理 Tauri fs API 返回的数据
 type FileSystemEntry = {
@@ -117,8 +119,8 @@ const onToggle = () => {
 }
 
 const expandedKeys = ref<Record<string, boolean>>({});
-const selectedKeys:TreeSelectionKeys = ref({});
-const treeData= ref([]);
+const selectedKeys: TreeSelectionKeys = ref({});
+const treeData = ref([]);
 
 const projects = computed(() => {
   return systemStore.projects;
@@ -127,6 +129,8 @@ const projects = computed(() => {
 const menuRef = ref();
 const selectedNode = ref<TreeNode | null>(null);
 
+// TOC 容器引用
+const tocContainer = ref<HTMLElement | null>(null);
 
 const tocList = computed(() => {
   console.info(systemStore.toc)
@@ -135,6 +139,33 @@ const tocList = computed(() => {
 const onClickTocItem = (data: Record<string, any>) => {
   EventBus.emit('select-toc-item', data);
 }
+
+// 滚动 TOC 到当前 active 项
+const scrollToActiveTocItem = () => {
+  if (!tocContainer.value) return;
+
+  const activeItem = tocContainer.value.querySelector('.toc-item.is-active') as HTMLElement;
+  if (!activeItem) return;
+
+  const container = tocContainer.value;
+  const containerHeight = container.clientHeight;
+  const itemTop = activeItem.offsetTop;
+  const itemHeight = activeItem.offsetHeight;
+
+  // 将 active 项滚动到容器中间位置
+  const scrollTop = itemTop - containerHeight / 2 + itemHeight / 2;
+  container.scrollTo({
+    top: scrollTop,
+    behavior: 'smooth'
+  });
+};
+
+// 监听 tocList 变化，自动滚动到 active 项
+watch(tocList, () => {
+  nextTick(() => {
+    scrollToActiveTocItem();
+  });
+}, { deep: true });
 // 动态菜单项
 const items = computed(() => {
   if (!selectedNode.value) return [];

@@ -23,7 +23,8 @@
       "Bash(pnpm ls --depth=0)",
       "Bash(pnpm build:*)",
       "Bash(cat:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "WebSearch"
     ],
     "deny": [],
     "ask": []
